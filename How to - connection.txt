@@ -1,0 +1,96 @@
+How to establish a connection using Artemis:
+
+An artemis relay object will already be created and stored in the global variable: relay. Before any users can be registered with the system or any messages sent, the relay must be configured. Do this by calling relay.configure(HANDLE) where HANDLE is a lowercase alphanumeric string no longer than eight characters. A handle is your world's identity on the network and must be unique, but it should still say a little something about your server. An example of a good handle would be "mercury" or "iains_17". If you leave out the HANDLE argument, a handle will be assigned psuedo-randomly. Note that you cannot change a handle later, and attempting to do so will result in undefined behavior, and eventually your server's removal from the network. Having a configured relay establishes your network.
+
+Once you have your relay configured, you can connect to a remote server by calling relay.connect(ADDRESS) where address is the ip address and port at which the remote server is running, in the following format: "ip_address:port". If the remote server is reachable and is running a compatible version of Artemis, the two servers will exchange information about connected servers, users on the network, and the channels on the network. To determine if the connection was successful, wait several ticks and then examine the contents of relay.users (a list). If you find an entry that looks something like this "system.ceres" then you know the remote server ("ceres", in this example has connected. In a game or other project, you will be able to tell that the server connected when you visually see all the new users joining, though programming this effect will be up to you. More on this later.
+
+Now that you have a network of one or more servers you can begin to register users and take other actions; a properly configured server will relay this info on to all other servers on the network without you having to do anything. You can register a user by calling relay.register_user(USER_NAME) where USER_NAME is a lowercase alphanumeric string no longer than sixteen characters. The USER_NAME is a user's identity on the network, and must be unique to the local server. If you attempt to register a USER_NAME which already exists on the local server, the register_user() proc will return ACTION_BADUSER. Users should not be conserned about getting the exact USER_NAME they want because this data is most often hidden. Users will generally see the "nickname" each user may choose instead.
+
+The structure of the network is a tree, where each node (relay) sees itself as the root of this tree. Each user registered on the network will have a unique id, known as it's FULL_NAME, for your server. For instance, a local user on the server "mercury" who registered the name "john" will have the FULL_NAME "john" on that server, but will have the full name "john.mercury" on a server one node away, and a name like "john.mercury.iains_17" two nodes away. Meanwhile, the user "ralphy" who is local to "karma" will have the FULL_NAME "ralphy.karma.iains_17" as viewed by the server "mercury". The great part is that you never have to worry about this. All your server knows is that it has a user "ralphy.karma.iains_17" who is sending messages; when you route a message to that user, Artemis will take care of relaying it correctly along the network.
+
+On the network there also exists a group of channels. A channel is a simply a group of users, though there are some other aspects we'll mention later. A channel is created when the first user attempts to join it, and it is deleted when the last user leaves it. Each user in a channel has an associated permission level, one of PERMISSION_OWNER, PERMISSION_OPERATOR, PERMISSION_VOICED, PERMISSION_NORMAL, PERMISSION_MUTED, or PERMISSION_BLOCKED. A blocked user cannot join the channel. A muted user can join, but cannot speak in the channel. A normal user can join and speak in the channel normally. A voiced user can speak in the channel even if it's status has been set to STATUS_LOCKED, and can join even if it's status has been set to STATUS_CLOSED. A user with operator status has all the privileges of a voiced user, but can also change other users' permission levels, can change the channel status, and can change the channel topic, and is immune to other operators' actions. The channel owner has all the privileges of an operator, but can also appoint or remove operators; the first user to join a channel is appointed the channel owner.
+
+Channel Asymetry: When two networks are joined together, the channels and users on each are merged together. If the same channel exists on both networks prior to the merger, this can cause an asymetry in that channel. For the most part, the effects of the asymetry are minor. For instance, the channel owner on one side of the network will be different from the channel owner on the other side. If the channel owner on the first side bans a user on the other side, that user will be banned from the first side, but not from his own side. If the semi-banned user then sends a message on the channel, his own side of the network will hear him, but the message will be blocked on the first side. This effectively keeps the channels structure in place previous to the merger, while still allowing communication between the channels.
+
+Now that you understand the structure of a network, how do we actually join channels or send messages? This is all done via relay.route(MSG) where MSG is an object of type /relay/msg. All actions performed on the network are accomplished by sending an appropriately formed /relay/msg. A msg consist of the following five parts, passed in sequence as follows:
+
+var/relay/msg/M = new(SENDER, TARGET, ACTION, BODY, TIME)
+
+Once a msg has been created, changing it's contents is not advised and may result in undefined behavior. SENDER is the full_name of a user on the network. TARGET is also the full name of a user on the network. ACTION is one of several numbers as defined in the file "defines.dm" and determines how the target structure will respond to the message. BODY is a text string which is formatted different depending on the ACTION type. TIME is a time stamp as stored in world.timeofday and should be left out so that the current time will be supplied automatically.
+
+Most actions defined in "defines.dm" are used by the relays as they merge and sync the network. The actions a developer needs to innitiate are those in the range of 30 through 40: the user actions. To perform one of these action, simply create a properly formatted message, and then call relay.route(MSG) where MSG is the message. A client will have to be able to send and handle the receipt of the following messages:
+
+
+
+ACTION_MESSAGE [30]: This is the most common type of message. It represents a text message sent from one user to another as a PM, or from one user to a channel of users. When the message represents a private message (PM), the SENDER and TARGET arguments are the full_names of each, and the BODY has no special format:
+
+new /relay/msg("ralphy", "john.mercury", ACTION_MESSAGE, "Hi John")
+
+When the message represents a channel message, the format stats the same except for the TARGET, which is formatted as such:
+
+new /relay/msg("ralphy", "#checkers", ACTION_MESSAGE, "Hi guys")
+
+After the relay has routed this message, each user of the channel "checkers" will receive a message formatted like so:
+
+new /relay/msg("ralphy.kharma", "john#checkers", ACTION_MESSAGE, "Hi guys")
+
+This sort of USER#CHANNEL format should never be constructed by the developer, and is something the relay handles automatically. When a channel message is sent between relays, it is sent directly to the channel in the form of #CHANNEL, so a target in the form of USER#CHANNEL will always be a local user, and you will never encounter a valid message in the form of USER.SERVER#CHANNEL or USER#CHANNEL.SERVER.
+
+
+
+ACTION_JOIN [31]: This message is used to join a user to a channel. It does not use the BODY argument, and is formatted thus:
+
+new /relay/msg("ralphy", "#checkers", ACTION_JOIN)
+
+
+
+ACTION_LEAVE [32]: This message is used to leave a channel. It does not use the BODY argument, and is formatted thus:
+
+new /relay/msg("ralphy", "#checkers", ACTION_LEAVE)
+
+
+
+ACTION_DENIED [33]: This message is usually sent by the system when a channel has denied a user access to a certain feature. For example, if the user tries to change the topic in a channel he does not have operator status in, he will receive an ACTION_DENIED message with specific info on what was denied and why in the BODY argument. As such, you should know how to format this message so that you can display the BODY info when it is received. You may also wish to send this message if a user receives a PM from another user he wishes to ignore. It is formatted thus:
+
+new /relay/msg("system", "ralphy.kharma", ACTION_DENIED, "You cannot operate this channel.")
+
+
+
+ACTION_OPERATE [34]: This message is sent by a user attempting to operate a channel. The message's body has a complex structure which at it's highest level is the same used by the params2list() proc. Using this message an operator can change a channel's status or topic, or can change the permission level of a user.
+
+The status section is a numeric value formed by using the bit flags STATUS_CLOSED, STATUS_HIDDEN, and STATUS_LOCKED. A closed channel cannot be joined by unvoiced users, a hidden channel should not be listed in any queries, and unvoiced users cannot speak in a locked channel. To signify that a channel is not locked, hidden, or closed, use the STATUS_NORMAL macro [0]:
+
+var/status = STATUS_LOCKED | STATUS_HIDDEN
+
+
+The topic section is a text string which must be encoded in the same format as returned by the url_encode() proc:
+
+var/topic = url_encode({"The official channel of <a href="example_url">Ralphy.Checkers</a>!"})
+
+
+The user section, if present, contains one or more user names separated by a space " ", each with a new permission level:
+
+var/user = "john.mercury:[PERMISSION_MUTED] george:[PERMISSION_OPERATOR]"
+
+
+These sections are then all merged together to form the body:
+
+var/body = "status=[status];topic=[topic];user=[user];"
+var/relay/msg/M = new("ralphy", "#checkers, ACTION_OPERATE, body)
+
+
+
+ACTION_PREFERENCES [35]: Several user preferences are stored on each node of the network, these are the user's preferred nickname, name color, and text color. A client is welcome to access and use this color however the developer sees fit. For example, messages from a user could be displayed as comming from the nickname instead of the full name (which could be long, like "john.mercury.kharma.hidalgo7.january"), but if two users have the same nickname then it could display the full name (or a shorter version, like "john.mercury"). The body of this message uses the params format, and the special value "clear" is used to denote that the user has no preference. You may include as many or as few of the preferences options as you like; options which are not included will simply not be changed. Preferences messages are always sent to SYSTEM, and are formatted thus:
+
+var/body = "nickname=Ralpy-O!;color_name=#f00;color_text=#f8f;"
+var/relay/msg/M = new("ralphy.kharma", SYSTEM, ACTION_PREFERENCES, body)
+
+
+
+
+
+
+
+
+
+
