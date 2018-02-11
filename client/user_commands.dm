@@ -10,6 +10,7 @@ client
 	verb
 		mainParse(what as text|null)
 			set name = "mainparse"
+			d(what)
 			if(!what) return
 			if(copytext(what,1,2) == "/")
 				var/word_split = findtextEx(what, " ")

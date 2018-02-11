@@ -17,7 +17,7 @@
 
 #define SYSTEM "system"
 #define PROTOCOL_VERSION "0.3"
-#define MAX_HANDLE_LENGTH 8
+#define MAX_HANDLE_LENGTH 12
 	// The max length of a relay (server) name
 
 //-- Channel Status Flags ------------------------
@@ -40,12 +40,13 @@
 //-- Message Types and Return Codes---------------
 // Needs refactoring to clarify the two
 
-#define ACTION_SUCCESS 1
-#define ACTION_FAILURE 2
-#define ACTION_MALFORMED 3
-#define ACTION_COLLISION 4
-#define ACTION_NONEXIST 5
-#define ACTION_UNREACHABLE 6
+#define RESULT_NOTARTEMIS 1
+#define RESULT_SUCCESS 2
+#define RESULT_FAILURE 3
+#define ACTION_MALFORMED 4
+#define ACTION_COLLISION 5
+#define ACTION_NONEXIST 6
+#define ACTION_UNREACHABLE 7
 //#define ACTION_DEATH 8
 
 #define ACTION_PING 10
@@ -73,3 +74,5 @@
 #define LINE world << {"<span style="color:#800">[__FILE__]:[__LINE__]</span>"};
 
 #define DIAG(X) world << {"<span style="color:red">[__FILE__]:[__LINE__]:: [X]</span>"};;
+
+#define ALERT(X) for(var/client/C){ alert(C,X)}

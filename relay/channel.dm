@@ -43,7 +43,8 @@ relay/channel
 				relay.route(new /relay/msg(SYSTEM, "[localUser]#[name]", ACTION_TRAFFIC, "leave=[userName];"))
 	proc
 		receive(relay/msg/msg)
-			var resultCode = ACTION_SUCCESS // Important! Will not route to other servers without this value returned
+			. = RESULT_SUCCESS // Important! Will not route to other servers without this value returned
+			var resultCode
 			switch(msg.action)
 				if(ACTION_MESSAGE, ACTION_EMOTE, ACTION_CODE)
 					resultCode = actionMessage(msg)
@@ -53,7 +54,8 @@ relay/channel
 					resultCode = actionLeave(msg)
 				if(ACTION_OPERATE)
 					resultCode = actionOperate(msg)
-			return resultCode
+			if(resultCode)
+				return resultCode
 
 		actionMessage(relay/msg/msg)
 			if(!canSpeak(msg.sender))
@@ -65,19 +67,19 @@ relay/channel
 
 		actionJoin(relay/msg/msg)
 			if(msg.sender in activeUsers)
-				return ACTION_FAILURE
+				return RESULT_FAILURE
 			if(permissionLevel(msg.sender) <= PERMISSION_BLOCKED)
 				spawn()
 					relay.route(new /relay/msg(SYSTEM, "[msg.sender]#[name]", ACTION_DENIED, "You do not have permission to join this channel."))
 				return ACTION_DENIED
 			add(msg.sender)
-			return ACTION_SUCCESS
+			return RESULT_SUCCESS
 
 		actionLeave(relay/msg/msg)
 			if(!(msg.sender in activeUsers))
 				return ACTION_MALFORMED
 			remove(msg.sender)
-			return ACTION_SUCCESS
+			return RESULT_SUCCESS
 
 		actionOperate(relay/msg/msg)
 			// Cancel out if the msg sender doesn't have appropriate permissions

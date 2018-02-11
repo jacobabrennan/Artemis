@@ -1,9 +1,26 @@
 
 
-//------------------------------------------------------------------------------
+//-- World Configuration - world/Topic() must be handled by the relay ----------
 
-var /relay/relay = new()
+world/Topic(T, Addr, Master, Key)
+	. = ..()
+	if(relay)
+		var result = relay.import(T, Addr)
+		if(result == RESULT_NOTARTEMIS)
+			return .
+		return result
+
+
+//-- Artemis Relay -------------------------------------------------------------
+
+var /relay/relay
 relay
+	New(newHandle)
+		. = ..()
+		relay = src
+		var result = configure(newHandle)
+		if(!result) del src
+
 	var
 		relay/server/rootServer
 		list/passwords = new()
@@ -48,7 +65,7 @@ relay
 				proxy = rootServer.getServer(userPath[userPath.len], TRUE)
 			for(var/relay/server/dependentServer in (rootServer.dependents - proxy))
 				route(new /relay/msg(SYSTEM, "[SYSTEM].[dependentServer.handle]", ACTION_REGUSER, userName))
-			return ACTION_SUCCESS
+			return RESULT_SUCCESS
 
 	//------------------------------------------------
 	proc
@@ -109,68 +126,68 @@ relay
 				return
 
 		actionRegisterServer(relay/msg/msg)
+			DIAG("attempting connection")
+			// Ensure that this message has been sent by a SYSTEM user
 			var /list/senderPath = text2list(lowertext(msg.sender), ".")
-			if(senderPath.len != 2 || senderPath[1] != SYSTEM) return
-			var /list/arg_list = params2list(msg.body)
-			var _handle
-			var _password = arg_list["password"]
-			var _address  = arg_list["address" ]
-			var _response = arg_list["response"]
-			var _servers  = lowertext(arg_list["servers"])
-			if(!(_password && _address && _servers)) return ACTION_MALFORMED
-			var /relay/server/S = new()
-			var /new_handles = S.string2tree(_servers)
-			if(!new_handles) return // malformed
-			_handle = S.handle
-			if(length(_handle) > MAX_HANDLE_LENGTH) return // malformed
-			var/collisions = {""}
-			for(var/handle_path in new_handles)
-				var /list/path_im_running_out_of_var_names = text2list(handle_path, ".")
-				var server_handle = path_im_running_out_of_var_names[1]
-				if(rootServer.getServer(server_handle))
-					if(length(collisions)) collisions += " "
-					collisions += "[server_handle]"
-			if(length(collisions))
+			if(senderPath.len != 2 || senderPath[1] != SYSTEM)
+				DIAG("Wrong User")
+				return
+			// Parse arguments from message body. Ensure message was formatted correctly
+			var /list/argList = params2list(msg.body)
+			var remoteHandle = senderPath[2]
+			var remotePassword = argList["password"]
+			var remoteAddress  = argList["address" ]
+			var _response = argList["response"]
+			if(!(remotePassword && remoteAddress))
+				DIAG("Malformed")
+				return ACTION_MALFORMED
+			if(length(remoteHandle) > MAX_HANDLE_LENGTH)
+				DIAG("Too Long: [remoteHandle] > [MAX_HANDLE_LENGTH]")
+				return // malformed
+			// Check for Artemis handle collisions (instance with that handle already connected)
+			if(rootServer.getServer(remoteHandle))
 				spawn()
-					export(new /relay/msg(SYSTEM, "[SYSTEM].[_handle]", ACTION_COLLISION, collisions), _address)
+					export(new /relay/msg(SYSTEM, "[SYSTEM].[remoteHandle]", ACTION_COLLISION, remoteHandle), remoteAddress)
+				DIAG("Collision")
 				return ACTION_COLLISION
-			var /old_servers_list = rootServer.tree2string()
-			var /list/old_servers = rootServer.dependents.Copy()
-			S.password = _password
-			S.address = _address
-			rootServer.dependents += S
-			var/new_servers_text = list2text(new_handles, " ")
-			for(var/relay/server/old_server in old_servers)
-				route(new /relay/msg(SYSTEM, "[SYSTEM].[old_server.handle]", ACTION_SERVERUPDATE, new_servers_text))
-			if(_response) return ACTION_SUCCESS
-			var/outgoing_pass = md5("[rootServer.handle][rand(1,65535)]")
-			passwords[S.handle] = outgoing_pass
-			route(new /relay/msg(SYSTEM, "[SYSTEM].[S.handle]", ACTION_REGSERVER, "response=true;password=[outgoing_pass];servers=[old_servers_list];"))
+			// Create the newly connected Server
+			var /relay/server/connectingServer = new(remoteHandle)
+			connectingServer.password = remotePassword
+			connectingServer.address = remoteAddress
+			rootServer.dependents.Add(connectingServer)
+			// Respond with a Register Server action from this Artemis instance
+			if(_response)
+				DIAG("Response Success")
+				return RESULT_SUCCESS
+			var outgoingPass = md5("[rootServer.handle][rand(1,65535)]")
+			passwords[connectingServer.handle] = outgoingPass
+			route(new /relay/msg(SYSTEM, "[SYSTEM].[remoteHandle]", ACTION_REGSERVER, "response=true;password=[outgoingPass];"))
 			// Generate information about all users on this server
-			var users_list = list2text(users, " ")
+			var usersList = list2text(users, " ")
 			var /list/prefs_list = new()
 			for(var/userName in users)
 				var /relay/user/_u = users[userName]
-				var _body = {""}
-				if(_u.nickname)   _body += "nickname=[  _u.nickname  ];"
-				if(length(_body))
-					prefs_list.Add(new /relay/msg(userName, "[SYSTEM].[S.handle]", ACTION_NICKNAME, _body))
-			//
+				if(_u.nickname)
+					prefs_list.Add(new /relay/msg(userName, "[SYSTEM].[remoteHandle]", ACTION_NICKNAME, _u.nickname))
+			// Send users list, channels list, and user nicknames
 			spawn(1)
-				route(new /relay/msg(SYSTEM, "[SYSTEM].[S.handle]", ACTION_REGUSER, users_list))
+				route(new /relay/msg(SYSTEM, "[SYSTEM].[remoteHandle]", ACTION_REGUSER, usersList))
 				spawn(1)
 					for(var/chan_name in channels)
 						var/relay/channel/C = channels[chan_name]
-						route(new /relay/msg(SYSTEM, "[SYSTEM].[S.handle]", ACTION_CHANSYNC, C.chan2string()))
+						route(new /relay/msg(SYSTEM, "[SYSTEM].[remoteHandle]", ACTION_CHANSYNC, C.chan2string()))
 					spawn(1)
 						for(var/relay/msg/M in prefs_list)
 							sleep(0)
 							route(M)
-			return ACTION_SUCCESS
+			// Return success
+			DIAG("Connection Success")
+			return RESULT_SUCCESS
 
 		actionRegisterUser(relay/msg/msg)
 			var /list/sender_path = text2list(lowertext(msg.sender), ".")
-			if(sender_path[1] != SYSTEM) return
+			if(sender_path[1] != SYSTEM)
+				return
 			var string = lowertext(msg.body)
 			var remote_handle
 			//var/list/sender_path = text2list(msg.sender, ".")
@@ -187,7 +204,7 @@ relay
 				else
 					result = registerUser("[user_name]")
 				switch(result)
-					if(ACTION_SUCCESS ) successes += user_name
+					if(RESULT_SUCCESS ) successes += user_name
 					if(ACTION_BADUSER ) bad_users += user_name
 					if(ACTION_CONFLICT) conflicts += user_name
 			if(conflicts.len)
@@ -293,7 +310,7 @@ relay
 					if(!_user)
 						return ACTION_NONEXIST
 					_user.receive(msg)
-					return ACTION_SUCCESS
+					return RESULT_SUCCESS
 				else
 					var /relay/channel/C = channels[chanName]
 					if(!C)
@@ -304,15 +321,15 @@ relay
 						C.topic = "[C.name] -- Artemis Chat"
 						channels[C.name] = C
 					var result = C.receive(msg)
-					if(result == ACTION_SUCCESS)
+					if(result == RESULT_SUCCESS)
 						var /list/senderPath = text2list(msg.sender, ".")
 						var senderHandle = (senderPath.len > 1)? senderPath[senderPath.len] : rootServer.handle
 						for(var/relay/server/S in rootServer.dependents)
 							if(S.handle == senderHandle) continue
 							export(new /relay/msg(msg.sender, "[msg.target].[S.handle]", msg.action, msg.body, msg.time), S.address)
 							// ".[server]" section will be stripped off in import(), making this target valid.
-						return ACTION_SUCCESS
-					return ACTION_FAILURE
+						return RESULT_SUCCESS
+					return RESULT_FAILURE
 			// Start message to be routed to another server (such as an intermediary on a private message)
 			else if(serverPath.len > 1)
 				if(!(msg.sender in users))
@@ -333,7 +350,7 @@ relay
 					_user.receive(msg)
 
 
-//------------------------------------------------------------------------------
+//-- Inter Artemis Communication -----------------------------------------------
 
 relay
 	proc
@@ -348,27 +365,28 @@ relay
 			return rootServer.handle
 
 		connect(_address)
-			// Retrieve remote server handle
-			DIAG("[_address]?artemis=ping;")
-			var _ping = world.Export("[_address]?artemis=ping;")
-				// "Artemis [VERSION]: [relay.handle]"
-			if(copytext(_ping, 1, 8) != "Artemis")
-				return ACTION_FAILURE
-			var spacePos = findtextEx(_ping, " ")
-			var colonPos = findtextEx(_ping, ":")
-			if(copytext(_ping, spacePos+1, colonPos) != "[PROTOCOL_VERSION]")
-				return ACTION_FAILURE
+			// Attempt to Connect. Cancel if the remote server does not respond with
+			// the the proper handshake and compatible version information.
+			var remoteReply = world.Export("[_address]?artemis=ping;")
+			// This reply should be: "Artemis [VERSION]: [relay.handle]"
+			if(copytext(remoteReply, 1, 8) != "Artemis") return RESULT_FAILURE
+			var spacePosition = findtextEx(remoteReply, " ")
+			var colonPosition = findtextEx(remoteReply, ":")
+			var remoteVersion = copytext(remoteReply, spacePosition+1, colonPosition)
+			var remoteHandle  = copytext(remoteReply, colonPosition+2)
+			if(remoteVersion != "[PROTOCOL_VERSION]") return RESULT_FAILURE
+			if(!remoteHandle) return RESULT_FAILURE
 			// Register local server handle with remote server
 			var password = md5("[rootServer.handle][rand(1,65535)]")
-			var remoteHandle = copytext(_ping, colonPos+2)
+			passwords[remoteHandle] = password
 			var /relay/msg/message = new(
 				SYSTEM,
 				"[SYSTEM].[remoteHandle]",
 				ACTION_REGSERVER,
-				"password=[password];servers=[rootServer.tree2string()];"
+				"password=[password];"
 			)
 			export(message, _address)
-			passwords[remoteHandle] = password
+			// Register all users on the remote server
 			if(users.len)
 				spawn(1)
 					message = new(
@@ -378,7 +396,6 @@ relay
 						list2text(users, " ")
 					)
 					export(message, _address)
-			return ACTION_SUCCESS
 
 		disconnect(_handle) // leave _handle null to disconnect all, like when world exits
 			if(!_handle)
@@ -391,59 +408,68 @@ relay
 					route(new /relay/msg(SYSTEM, "[SYSTEM].[S.handle]", ACTION_DISCONNECT))
 					route(new /relay/msg("[SYSTEM].[S.handle]", SYSTEM, ACTION_DISCONNECT))
 
-	//------------------------------------------------
+	//-- Export/Import - Convert Topics to Messages --
 	proc
 		export(var/relay/msg/msg, address)
-			// called by program to export a message
+			// Append own handle to message sender, and convert message to text
 			msg.sender = "[msg.sender].[rootServer.handle]"
 			var/topic = msg2topic(msg)
+			// Return immediately. Don't wait for network delays.
 			spawn()
+				// Send the message to the remote Artemis Instance
 				var result = world.Export("[address]?[topic]", null, 1)
-				if(copytext(result, 1, 8) != "Artemis")
-					for(var/relay/server/S in rootServer.dependents)
-						if(S.address == address)
-							var /relay/msg/M = new(
-								"[SYSTEM].[rootServer.handle]",
-								"[SYSTEM].[S.handle]",
-								ACTION_DISCONNECT
-							)
-							S.drop()
-							world.Export("[address]?[msg2topic(M)]", null, 1)
+				// If we get back a proper Artemis reply, we're done.
+				if(copytext(result, 1, 8) == "Artemis") return
+				// If we DO NOT get back an Artemis reply, disconnect the remote server
+				for(var/relay/server/S in rootServer.dependents)
+					if(S.address != address) continue
+					var /relay/msg/M = new(
+						"[SYSTEM].[rootServer.handle]",
+						"[SYSTEM].[S.handle]",
+						ACTION_DISCONNECT
+					)
+					S.drop()
+					world.Export("[address]?[msg2topic(M)]", null, 1)
+					return
 
 		import(string, address)
-			// called by world when exteral world sends a message to this one
-			if(!rootServer) return
-			if(!.)
-				. = "Artemis [PROTOCOL_VERSION]: [relay.rootServer.handle]"
+			// Check if this is an Artemis message
 			var decoded = url_decode(string)
 			var action = copytext(decoded,1,9)
-			if(action != "artemis=") return
+			if(action != "artemis=") return RESULT_NOTARTEMIS
+			// Respond with correct handshake information
+			. = "Artemis [PROTOCOL_VERSION]: [relay.rootServer.handle]"
+			// Determine Artemis Action. Cancel if malformed.
 			var semicolon_pos = findtextEx(decoded, ";", 9)
 			if(!semicolon_pos) return
-			action = copytext(decoded, 9, semicolon_pos)
+			action = lowertext(copytext(decoded, 9, semicolon_pos))
 			if(!length(action)) return
-			switch(lowertext(action))
-				if("ping") return
-				if("message")
-					var/relay/msg/M = topic2msg(string)
-					if(!istype(M)) return
-					if(M.action == ACTION_REGSERVER)
-						M.body += "address=[address];"
-					else // Authentication : Is this the address of the server we have on file?
-						var /list/senderPath = text2list(lowertext(M.sender), ".")
-						if(senderPath.len < 2) return
-						var remoteHandle = senderPath[senderPath.len]
-						var /relay/server/S = rootServer.getServer(remoteHandle, TRUE)
-						if(!S || S.address != address) return
-						// End Authentication
-					var /list/target_path = text2list(lowertext(M.target), ".")
-					if(!target_path.len) return
-					if(lowertext(target_path[target_path.len]) != rootServer.handle) return
-					target_path.Cut(target_path.len)
-					M.target = list2text(target_path, ".")
-					spawn()
-						relay.route(M)
-					return
+			// Ping actions are handled via the default handshake message
+			// All other Artemis communication is handled via routed messages
+			if(action != "message") return
+			// Ensure the message was properly formatted
+			var/relay/msg/msg = topic2msg(string)
+			if(!istype(msg)) return
+			// If this is a new server, record the incomming address
+			if(msg.action == ACTION_REGSERVER)
+				msg.body += "address=[address];"
+			else
+			// Authentication : Is this the address we have on file for this server?
+				var /list/senderPath = text2list(lowertext(msg.sender), ".")
+				if(senderPath.len < 2) return
+				var remoteHandle = senderPath[senderPath.len]
+				var /relay/server/remoteServer = rootServer.getServer(remoteHandle, TRUE)
+				if(!remoteServer || remoteServer.address != address) return
+			// Remove own handle from msg target
+			var /list/targetPath = text2list(lowertext(msg.target), ".")
+			if(!targetPath.len) return
+			if(lowertext(targetPath[targetPath.len]) != rootServer.handle) return
+			targetPath.Cut(targetPath.len)
+			msg.target = list2text(targetPath, ".")
+			// Relay the message
+			spawn()
+				relay.route(msg)
+			return
 
 		msg2topic(relay/msg/msg)
 			var string = "artemis=message;"

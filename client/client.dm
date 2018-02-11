@@ -22,7 +22,7 @@ client
 		sleep(10)
 		var userName = relay.validId(ckey)
 		var result = relay.registerUser(userName)
-		if(result != ACTION_SUCCESS)
+		if(result != RESULT_SUCCESS)
 			alert({"The server has denied registration for the user "[userName]". Error [result]"})
 			winset(src, null, "command=.quit")
 			del src

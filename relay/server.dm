@@ -1,9 +1,12 @@
 
 
-//------------------------------------------------------------------------------
+//-- Artemis Server - Represents a Remote Artemis instance ---------------------
 
 relay/server
 	parent_type = /datum
+	New(newHandle)
+		handle = newHandle
+		. = ..()
 	var
 		handle
 		password
@@ -13,7 +16,7 @@ relay/server
 	proc
 
 		//------------------------------------------------
-		tree2string()
+		/*tree2string()
 			var result
 			for(var/relay/server/dependentServer in dependents)
 				if(!result) result = "{"
@@ -59,6 +62,7 @@ relay/server
 						if(dependentHandle in handles) return
 						handles.Add("[dependentHandle].[handle]")
 			return handles
+		*/
 
 		//------------------------------------------------
 		getServer(serverHandle, dependentOnly)
