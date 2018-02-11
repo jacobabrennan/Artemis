@@ -94,8 +94,8 @@ client
 			winset(src, "pref_color.cb_traffic"   , "background-color='[S.traffic     ]'")
 			winset(src, "pref_color.cb_background", "background-color='[S.background  ]'")
 			winset(src, "pref_color.color_test"   , "background-color='[S.background  ]'")
-			winset(src, "pref_color.cb_pname"     , "background-color='[preferences.name_color]'")
-			winset(src, "pref_color.cb_ptext"     , "background-color='[preferences.text_color]'")
+			winset(src, "pref_color.cb_pname"     , "background-color='[preferences.colorName]'")
+			winset(src, "pref_color.cb_ptext"     , "background-color='[preferences.colorText]'")
 			winset(src, "pref_color.color_test"   , "style='[S.style()]'")
 			var/ipsum
 			var/test_colon = {"<span class="time_stamp">:</span>"}
@@ -122,9 +122,9 @@ client
 <span class="system">System Message</span>
 [test_time_stamp]\
 [test_using_nick? "" : {"<span class="time_stamp">&lt;</span>"}]\
-<span style="color:[preferences.name_color? preferences.name_color : preferences.skin.user]">[test_nick]</span>\
+<span style="color:[preferences.colorName? preferences.colorName : preferences.skin.user]">[test_nick]</span>\
 [test_using_nick? "[test_colon] " : {"<span class="time_stamp">&gt;</span>"}]\
-<span style="color:[preferences.text_color? preferences.text_color : preferences.skin.user_message]">Lorem ipsum.</span>
+<span style="color:[preferences.colorText? preferences.colorText : preferences.skin.user_message]">Lorem ipsum.</span>
 <i class="traffic">[preferences.view_nicks? "Lorem &lt;dolorem12&gt;" : "&lt;dolorem12&gt;"] has connected.</i>
 [test_time_stamp]\
 [preferences.view_nicks? {"<span class="user">Lorem</span>"} : {"<span class="time_stamp">&lt;<span class="user">dolorem12</span>&gt;</span>"}]\
@@ -262,12 +262,12 @@ client
 					winset(src, "pref_color.cb_[which]", "background-color='[color]'")
 					winset(src, "pref_color.color_test", "background-color='[color]'")
 				if("pname")
-					var color = input(src, null, "Personal Name", preferences.name_color) as color
-					preferences.name_color = color
+					var color = input(src, null, "Personal Name", preferences.colorName) as color
+					preferences.colorName = color
 					winset(src, "pref_color.cb_[which]", "background-color='[color]'")
 				if("ptext")
-					var color = input(src, null, "Personal Text", preferences.text_color) as color
-					preferences.text_color = color
+					var color = input(src, null, "Personal Text", preferences.colorText) as color
+					preferences.colorText = color
 					winset(src, "pref_color.cb_[which]", "background-color='[color]'")
 				if("viewcolors")
 					var is_checked = winget(src, "pref_color.cb_viewcolors", "is-checked")
@@ -299,9 +299,9 @@ client
 <span class="system">System Message</span>
 [test_time_stamp]\
 [test_using_nick? "" : {"<span class="time_stamp">&lt;</span>"}]\
-<span style="color:[preferences.name_color? preferences.name_color : preferences.skin.user]">[test_nick]</span>\
+<span style="color:[preferences.colorName? preferences.colorName : preferences.skin.user]">[test_nick]</span>\
 [test_using_nick? "[test_colon] " : {"<span class="time_stamp">&gt;</span>"}]\
-<span style="color:[preferences.text_color? preferences.text_color : preferences.skin.user_message]">Lorem ipsum.</span>
+<span style="color:[preferences.colorText? preferences.colorText : preferences.skin.user_message]">Lorem ipsum.</span>
 <i class="traffic">[preferences.view_nicks? "Lorem &lt;dolorem12&gt;" : "&lt;dolorem12&gt;"] has connected.</i>
 [test_time_stamp]\
 [preferences.view_nicks? {"<span class="user">Lorem</span>"} : {"<span class="time_stamp">&lt;<span class="user">dolorem12</span>&gt;</span>"}]\
@@ -312,7 +312,7 @@ client
 
 		applyPrefChanges(close as num)
 			set name = ".apply_pref_changes"
-			var/success = updateGeneral(FALSE)
+			var success = updateGeneral(FALSE)
 			if(success)
 				success = updateNaming(FALSE)
 			if(!success && close)
@@ -323,7 +323,10 @@ client
 			preferences.skin.apply(src)
 			if(close)
 				winshow(src, "preferences", 0)
-			preferencesSend()
+			// Set Colors on User & Relay Nickname
+			user.colorName = preferences.colorName
+			user.colorText = preferences.colorText
+			nicknameSend()
 
 	//------------------------------------------------
 	show_popup_menus = FALSE

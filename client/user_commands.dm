@@ -120,7 +120,7 @@ client
 		change_nick(new_nick as text)
 			set name = ".change_nick"
 			preferences.nickname = new_nick
-			preferencesSend()
+			nicknameSend()
 
 		join(channel as text)
 			set name = ".join"

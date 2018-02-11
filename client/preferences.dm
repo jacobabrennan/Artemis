@@ -4,9 +4,9 @@
 
 //------------------------------------------------
 relay/user
-	//var
-		//colorName
-		//colorText
+	var
+		colorName
+		colorText
 
 
 //------------------------------------------------
@@ -266,8 +266,8 @@ client
 			// Nonconfigurable
 			nickname
 			home_channel
-			name_color
-			text_color
+			colorName
+			colorText
 			view_nicks = TRUE
 			time_stamps = TRUE
 			traffic = TRUE
@@ -310,8 +310,8 @@ client
 				time_zone = text2num(child.Attribute("offset"))
 				daylight = text2num(child.Attribute("daylight"))
 				child = template.FirstChildElement("colors")
-				name_color = child.Attribute("name")
-				text_color = child.Attribute("text")
+				colorName = child.Attribute("name")
+				colorText = child.Attribute("text")
 				child = template.FirstChildElement("skin")
 				skinLoad(child)
 
@@ -323,7 +323,7 @@ client
 				template.AddChild(xmlRootFromString({"<show_traffic value="[traffic? 1 : 0]" />"}))
 				template.AddChild(xmlRootFromString({"<show_colors value="[show_colors? 1 : 0]" />"}))
 				template.AddChild(xmlRootFromString({"<time offset="[time_zone]" daylight="[daylight? 1 : 0]" />"}))
-				template.AddChild(xmlRootFromString({"<colors name="[name_color]" text="[text_color]" />"}))
+				template.AddChild(xmlRootFromString({"<colors name="[colorName]" text="[colorText]" />"}))
 				template.AddChild(skin.to_xml())
 				return template
 
@@ -432,37 +432,34 @@ client
 //------------------------------------------------
 client
 	proc
-		preferencesSend()
-			var/body = {""}
-			if(user.nickname && !length(preferences.nickname))
-				body += {"nickname=clear"}
-			else if(preferences.nickname && preferences.nickname != user.nickname)
-				body += {"nickname=[preferences.nickname];"}
-			if(preferences.name_color && preferences.name_color != user.colorName)
-				body += {"color_name=[preferences.name_color];"}
-			if(preferences.text_color && preferences.text_color != user.colorText)
-				body += {"color_text=[preferences.text_color];"}
-			if(length(body))
-				relay.route(new /relay/msg(user.fullName, SYSTEM, ACTION_PREFERENCES, body))
+		nicknameSend()
+			relay.route(new /relay/msg(user.fullName, SYSTEM, ACTION_NICKNAME, preferences.nickname))
 
 		preferencesLoad()
 			preferences = new(src)
 			var/file_path = "data/preferences/[ckey].xml"
 			if(!fexists(file_path))
 				preferences.skinLoad()
-				preferencesSend()
+				nicknameSend()
 				return
 			var/F = file(file_path)
 			F = file2text(F)
 			var/XML/Element/E = xmlRootFromString(F)
 			preferences.imprint(E)
-			preferencesSend()
+			// Set Colors on User & Relay Nickname
+			user.colorName = preferences.colorName
+			user.colorText = preferences.colorText
+			nicknameSend()
 
 		preferencesSave()
+			// Set Colors on User & Relay Nickname
+			user.colorName = preferences.colorName
+			user.colorText = preferences.colorText
+			nicknameSend()
+			// Save Preferences to File
 			var/XML/Element/E = preferences.to_xml()
 			var/file_path = "data/preferences/[ckey].xml"
 			if(fexists(file_path))
 				fdel(file_path)
 			var/F = file(file_path)
 			F << E.XML(TRUE)
-			preferencesSend()

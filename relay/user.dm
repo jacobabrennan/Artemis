@@ -9,8 +9,6 @@ relay/user
 		fullName
 		simpleName
 		nickname
-		colorName
-		colorText
 		datum/intelligence
 		list/channels = new()
 

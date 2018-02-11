@@ -146,16 +146,16 @@ relay
 			var/outgoing_pass = md5("[rootServer.handle][rand(1,65535)]")
 			passwords[S.handle] = outgoing_pass
 			route(new /relay/msg(SYSTEM, "[SYSTEM].[S.handle]", ACTION_REGSERVER, "response=true;password=[outgoing_pass];servers=[old_servers_list];"))
+			// Generate information about all users on this server
 			var users_list = list2text(users, " ")
 			var /list/prefs_list = new()
 			for(var/userName in users)
 				var /relay/user/_u = users[userName]
 				var _body = {""}
 				if(_u.nickname)   _body += "nickname=[  _u.nickname  ];"
-				if(_u.colorName) _body += "color_name=[_u.colorName];"
-				if(_u.colorText) _body += "color_text=[_u.colorText];"
 				if(length(_body))
-					prefs_list.Add(new /relay/msg(userName, "[SYSTEM].[S.handle]", ACTION_PREFERENCES, _body))
+					prefs_list.Add(new /relay/msg(userName, "[SYSTEM].[S.handle]", ACTION_NICKNAME, _body))
+			//
 			spawn(1)
 				route(new /relay/msg(SYSTEM, "[SYSTEM].[S.handle]", ACTION_REGUSER, users_list))
 				spawn(1)
@@ -230,53 +230,45 @@ relay
 				route(sync_message)
 
 		actionNickname(relay/msg/msg)
-			var /list/sender_path = text2list(lowertext(msg.sender), ".")
-			var remote_handle
-			if(sender_path.len > 1)
-				remote_handle = sender_path[sender_path.len]
+			// Cancel out if specified user doesn't exist
 			var /relay/user/U = users[msg.sender]
 			if(!U) return
-			var /list/params = params2list(msg.body)
-			var _nickname   = params["nickname"]
-			var _color_name = params["color_name"]
-			var _color_text = params["color_text"]
-			if(_nickname)
-				var old_nick = U.nickname
-				var clear = FALSE
-				if(_nickname == "clear") clear = TRUE
-				else
-					if(copytext(_nickname, 1, 2) == " ") clear = TRUE
-					else
-						if(length(_nickname) > 20)
-							_nickname = copytext(_nickname, 1, 21)
-							msg.body = list2params(params)
-						if((lowertext(_nickname) in nicknames) && (nicknames[lowertext(_nickname)] != U.fullName))
-							clear = TRUE
-				if(clear)
-					nicknames.Remove(lowertext(U.nickname))
-					U.nickname = null
-					_nickname = null
-					msg.body = list2params(params)
-				else
-					nicknames.Remove(lowertext(U.nickname))
-					U.nickname = _nickname
-					nicknames[lowertext(U.nickname)] = U.fullName
-				if(old_nick != U.nickname)
-					var t_body = "nick=[U.fullName]:[url_encode(old_nick)];"
-					for(var/channel_name in U.channels)
-						var/relay/channel/C = relay.getChannel(channel_name)
-						if(!istype(C)) continue
-						for(var/c_user in C.localUsers)
-							route(new /relay/msg(SYSTEM, "[c_user]#[C.name]", ACTION_TRAFFIC, t_body))
-			if(_color_name)
-				if(_color_name == "clear") U.colorName = null
-				else U.colorName = _color_name
-			if(_color_text)
-				if(_color_text == "clear") U.colorText = null
-				else U.colorText = _color_text
-			for(var/relay/server/S in rootServer.dependents)
-				if(remote_handle == S.handle) continue
-				route(new /relay/msg(msg.sender, "[SYSTEM].[S.handle]", ACTION_PREFERENCES, msg.body))
+			// Sanitize Nickname
+			var oldNick = U.nickname
+			var newNickname = msg.body ///list/params = params2list(msg.body)
+			if(length(newNickname) > 20)
+				newNickname = copytext(newNickname, 1, 21)
+			// Clear the nickname if: No nick supplied; nick starts with " "; there's a collision
+			var clear = FALSE
+			if(!newNickname) clear = TRUE
+			else if(copytext(newNickname, 1, 2) == " ") clear = TRUE
+			else if((lowertext(newNickname) in nicknames) && (nicknames[lowertext(newNickname)] != U.fullName))
+				clear = TRUE
+			if(clear)
+				nicknames.Remove(lowertext(U.nickname))
+				U.nickname = null
+				newNickname = null
+			// Set the New Nickname, and store in nicknames list
+			else
+				nicknames.Remove(lowertext(U.nickname))
+				U.nickname = newNickname
+				nicknames[lowertext(U.nickname)] = U.fullName
+			// If nickname was changed, generate traffic in joined channels
+			if(oldNick != U.nickname)
+				var t_body = "nick=[U.fullName]:[url_encode(oldNick)];"
+				for(var/channelName in U.channels)
+					var/relay/channel/joinedChannel = relay.getChannel(channelName)
+					if(!istype(joinedChannel)) continue
+					for(var/channelUser in joinedChannel.localUsers)
+						route(new /relay/msg(SYSTEM, "[channelUser]#[joinedChannel.name]", ACTION_TRAFFIC, t_body))
+			// Relay msg to all dependent servers (except the origin of the message)
+			var /list/senderPath = text2list(lowertext(msg.sender), ".")
+			var originHandle
+			if(senderPath.len > 1)
+				originHandle = senderPath[senderPath.len]
+			for(var/relay/server/dependentServer in rootServer.dependents)
+				if(originHandle == dependentServer.handle) continue
+				route(new /relay/msg(msg.sender, "[SYSTEM].[dependentServer.handle]", ACTION_NICKNAME, newNickname))
 
 		route(relay/msg/msg)
 			if(!rootServer) return
