@@ -38,7 +38,7 @@ client
 			if(hash_pos)
 				tab_channel = "#[copytext(msg.target, hash_pos+1)]"
 			else
-				tab_channel = target.fullName
+				tab_channel = target.nameFull
 			if(!(tab_channel in rooms))
 				roomAdd(tab_channel, FALSE)
 			var/formatted_text
@@ -68,7 +68,7 @@ client
 			if(hash_pos)
 				tab_channel = "#[copytext(msg.target, hash_pos+1)]"
 			else
-				tab_channel = sender.fullName
+				tab_channel = sender.nameFull
 			if(!(tab_channel in rooms))
 				roomAdd(tab_channel, FALSE)
 			var/formatted_text
@@ -118,7 +118,7 @@ client
 					if(!U) return
 					var/old_nick = copytext(value, colon_pos+1)
 					if(old_nick){ info = {" ([old_nick])"}}
-					var/full_span = "&lt;[U.fullName]&gt;"
+					var/full_span = "&lt;[U.nameFull]&gt;"
 					var/new_nick = U.nickname? html_encode(U.nickname) : full_span
 					info = {"[full_span][info] is now known as [new_nick]"}
 					updateWhogrid(tab_channel)
@@ -127,14 +127,14 @@ client
 					if(!U){ return}
 					if(preferences.view_nicks && U.nickname)
 						info = {"[html_encode(U.nickname)] "}
-					info = {"[info]&lt;[U.fullName]&gt; has connected."}
+					info = {"[info]&lt;[U.nameFull]&gt; has connected."}
 					updateWhogrid(tab_channel)
 				if("leave")
 					var/relay/user/U = relay.getUser(value)
 					if(!U) return
 					if(preferences.view_nicks && U.nickname)
 						info = {"[html_encode(U.nickname)] "}
-					info = {"[info]&lt;[U.fullName]&gt; has disconnected."}
+					info = {"[info]&lt;[U.nameFull]&gt; has disconnected."}
 					updateWhogrid(tab_channel)
 				if("topic")
 					var/capitol = uppertext(copytext(value,1,2)) // HACK
@@ -153,7 +153,7 @@ client
 					var/permission_tier = tiers[_tier+1]
 					if(preferences.view_nicks && U.nickname)
 						info = {"[html_encode(U.nickname)] "}
-					info = {"[info]&lt;[U.fullName]&gt; permission has been set to: [permission_tier]"}
+					info = {"[info]&lt;[U.nameFull]&gt; permission has been set to: [permission_tier]"}
 					updateWhogrid(tab_channel)
 				if("status")
 					info = {"Channel status has been set to:"}
@@ -188,7 +188,7 @@ client
 			var/using_nick = (sender.nickname && preferences.view_nicks)
 			var/sender_span
 			if(using_nick) sender_span = html_encode(sender.nickname)
-			else sender_span = sender.simpleName
+			else sender_span = sender.nameFull
 			var/message_span = linker.linkParse(body)
 			if(preferences.show_colors || sender == user)
 				sender_span  = {"<span style="color:[sender.colorName]">[sender_span ]</span>"}
@@ -210,7 +210,7 @@ client
 			var/using_nick = (sender.nickname && preferences.view_nicks)
 			var/sender_span
 			if(using_nick){ sender_span = html_encode(sender.nickname)}
-			else{ sender_span = sender.simpleName}
+			else{ sender_span = sender.nameFull}
 			var/message_span = linker.linkParse(body)
 			if(preferences.show_colors || sender == user)
 				sender_span  = {"<span style="color:[sender.colorName]">[sender_span ]</span>"}
@@ -233,7 +233,7 @@ client
 			var/using_nick = (sender.nickname && preferences.view_nicks)
 			var/sender_span
 			if(using_nick) sender_span = html_encode(sender.nickname)
-			else sender_span = sender.simpleName
+			else sender_span = sender.nameFull
 			var/message_span = {"<a href="?action=viewcode;code=\ref[cm];id=[cm.id];">Click to view Code</a>"}
 			if(preferences.show_colors || sender == user)
 				sender_span  = {"<span style="color:[sender.colorName]">[sender_span ]</span>"}
@@ -433,7 +433,7 @@ client
 client
 	proc
 		nicknameSend()
-			relay.route(new /relay/msg(user.fullName, SYSTEM, ACTION_NICKNAME, preferences.nickname))
+			relay.route(new /relay/msg(user.nameFull, SYSTEM, ACTION_NICKNAME, preferences.nickname))
 
 		preferencesLoad()
 			preferences = new(src)

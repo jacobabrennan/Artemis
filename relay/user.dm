@@ -6,32 +6,39 @@ relay/user
 	parent_type = /datum
 
 	var
-		fullName
-		simpleName
+		nameFull
+		nameSimple
+		nameHost
 		nickname
 		datum/intelligence
 		list/channels = new()
+		isRemote
 
 	Del()
-		if(fullName)
-			var/relay/user/U = relay.getUser(fullName)
+		DIAG("Deleting User: [nameFull]")
+		CRASH()
+		if(nameFull)
+			var/relay/user/U = relay.getUser(nameFull)
 			if(U == src)
-				relay.users.Remove(fullName)
-				if(relay.nicknames[lowertext(nickname)] == fullName)
+				relay.users.Remove(nameFull)
+				if(relay.nicknames[lowertext(nickname)] == nameFull)
 					relay.nicknames.Remove(lowertext(nickname))
 		. = ..()
 
 	proc
-		setName(newFullName)
-			fullName = relay.validId(newFullName)
-			var/list/namePath = relay.text2list(fullName, ".")
-			if(namePath.len > 1)
-				simpleName = "[namePath[1]].[namePath[2]]"
+		setName(newLocalName, newHostName)
+			nameSimple = relay.validId(newLocalName)
+			nameHost = newHostName
+			if(newHostName)
+				nameFull = "[nameSimple].[nameHost]"
 			else
-				simpleName = fullName
-			return fullName
+				nameFull = nameSimple
+			return nameFull
 
 		receive(relay/msg/msg)
+			if(isRemote)
+				CRASH("Attempt to route Remote User locally: [msg.target],[msg.sender],[msg.action]")
+				return
 			var result
 			if(intelligence)
 				if(hascall(intelligence,"receive"))
@@ -41,9 +48,9 @@ relay/user
 
 		drop()
 			for(var/chanName in channels)
-				relay.route(new /relay/msg(fullName, "#[chanName]", ACTION_LEAVE))
-			relay.users -= fullName
-			if(relay.nicknames[lowertext(nickname)] == fullName)
+				relay.route(new /relay/msg(nameFull, "#[chanName]", ACTION_LEAVE))
+			relay.users -= nameFull
+			if(relay.nicknames[lowertext(nickname)] == nameFull)
 				relay.nicknames -= lowertext(nickname)
 			del src
 

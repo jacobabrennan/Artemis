@@ -231,7 +231,7 @@ window "main"
 		anchor2 = none
 		is-default = true
 		saved-params = "pos;size;is-minimized;is-maximized"
-		title = "Ceres Communications Base - Main Belt"
+		title = "Artemis - Relay Chat"
 		statusbar = false
 		icon = 'client\\artemis.dmi'
 		macro = "macro"

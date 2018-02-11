@@ -69,7 +69,7 @@ client
 			winshow(src, "preferences")
 			var/client/preferences/skin/S = preferences.skin
 			/* Naming preferences */
-			winset(src, "pref_naming.name_netname"  , "text='Network Name: [user.fullName]'")
+			winset(src, "pref_naming.name_netname"  , "text='Network Name: [user.nameFull]'")
 			winset(src, "pref_naming.name_error"    , "is-visible='false'")
 			winset(src, "pref_naming.name_nickname" , "text='[user.nickname]'")
 			winset(src, "pref_naming.name_viewnicks", "is-checked='[bool2text(preferences.view_nicks)]'")
@@ -100,8 +100,8 @@ client
 			var/ipsum
 			var/test_colon = {"<span class="time_stamp">:</span>"}
 			var/test_time_stamp = {""}
-			var/test_nick = (user.nickname && preferences.view_nicks)? user.nickname : user.simpleName
-			var/test_using_nick = (test_nick != user.simpleName)
+			var/test_nick = (user.nickname && preferences.view_nicks)? user.nickname : user.nameFull
+			var/test_using_nick = (test_nick != user.nameFull)
 			if(preferences.time_stamps)
 				test_time_stamp = {"<span class="time_stamp">\[23:59\]</span>"}
 			if(preferences.show_colors)
@@ -173,7 +173,7 @@ client
 				winset(src, "pref_naming.name_error", "is-visible='true';text='This nickname is invalid';")
 				winset(src, "preferences.pref_tabs", "current-tab='pref_naming'")
 				return
-			else if(lowertext(new_nick) in relay.nicknames && relay.nicknames[lowertext(new_nick)] != user.fullName)
+			else if(lowertext(new_nick) in relay.nicknames && relay.nicknames[lowertext(new_nick)] != user.nameFull)
 				winset(src, "pref_naming.name_error", "is-visible='true';text='This nickname is taken';")
 				winset(src, "preferences.pref_tabs", "current-tab='pref_naming'")
 				return
@@ -277,8 +277,8 @@ client
 			var ipsum
 			var test_colon = {"<span class="time_stamp">:</span>"}
 			var test_time_stamp = {""}
-			var test_nick = (user.nickname && preferences.view_nicks)? user.nickname : user.simpleName
-			var test_using_nick = (test_nick != user.simpleName)
+			var test_nick = (user.nickname && preferences.view_nicks)? user.nickname : user.nameFull
+			var test_using_nick = (test_nick != user.nameFull)
 			if(preferences.time_stamps)
 				test_time_stamp = {"<span class="time_stamp">\[23:59\]</span>"}
 			if(preferences.show_colors)
@@ -361,7 +361,7 @@ client
 					else return "*"
 
 			clicked(var/client/who)
-				if(ckey(who.user.fullName) == ckey(user)) return
+				if(ckey(who.user.nameFull) == ckey(user)) return
 				who.roomAdd(user, TRUE)
 
 			right_clicked(var/client/who)
@@ -382,7 +382,7 @@ client
 		submitCode()
 			set name = ".submit_code"
 			var/_code = winget(src, "code_editor.code_input", "text")
-			var/relay/msg/M = new(user.fullName, current_room, ACTION_CODE, _code)
+			var/relay/msg/M = new(user.nameFull, current_room, ACTION_CODE, _code)
 			winshow(src, "code_editor", FALSE)
 			winset(src, "code_editor.code_input", "text='';")
 			if(copytext(current_room, 1, 2) != "#")
@@ -412,7 +412,7 @@ client
 				winclone(src, CLONER_CHANNEL, channel_name)
 			else
 				U = relay.getUser(channel_name)
-				title = "PM:[U.fullName]"
+				title = "PM:[U.nameFull]"
 				winclone(src, CLONER_PRIVATE, channel_name)
 			preferences.skin.apply(src, channel_name)
 			winset(src, channel_name, "title='[title]'")
@@ -434,6 +434,6 @@ client
 				title = C.name
 			else
 				U = relay.getUser(channel_name)
-				title = U.fullName
+				title = U.nameFull
 			if(copytext(channel_name,1,2) != "#"){ title = "PM:[title]"}
 			winset(src, channel_name, "title='*[title]';")

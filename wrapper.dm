@@ -5,21 +5,41 @@ client
 		if(words[1] == "c")
 			relay.connect("127.0.0.1:1000")
 		if(words[1] == "d")
-			relay.rootServer.dependents[1].drop()
+			relay.servers["ceres"].drop()
+			relay.servers.Remove("ceres")
+			relay.passwords.Remove("ceres")
+		if(words[1] == "e")
+			DIAG("All Users: ")
+			for(var/userName in relay.users)
+				DIAG("  [userName]")
 
 
 world
 	name = "Artemis"
 	hub = "iainperegrine.artemis"
+	visibility = FALSE
 
 world/New()
 	.=..()
-	relay = new("artemis")
+	//
+	var lePort = 999
+	var success
+	while(!success && lePort < 1100)
+		success = OpenPort(++lePort)
+		sleep(1)
+	var relayHandle
+	switch(lePort)
+		if(1000) relayHandle = "artemis"
+		if(1001) relayHandle = "ceres"
+		if(1002) relayHandle = "pallas"
+	//
+	relay = new(relayHandle)
 	world << {"Server "[relay.rootServer.handle]" opened on port [port]."}
 	world << {"Address:: [world.internet_address]:[world.port] \n\n"}
+	//
 	var/bot/logger/sally = new()
-	sally.channel = "sessions"
-	relay.registerUser("sally", sally)
+	sally.channel = "artemis"
+	relay.registerUser("sally", null, sally)
 	sally.user = relay.getUser("sally")
 	relay.route(new /relay/msg("sally", SYSTEM, ACTION_NICKNAME, "Sally"))
 	//relay.route(new /relay/msg("sally", SYSTEM, ACTION_PREFERENCES, "nickname=Sally;color_name=#fff;color_text=#f00;"))

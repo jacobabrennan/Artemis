@@ -19,6 +19,7 @@
 #define PROTOCOL_VERSION "0.3"
 #define MAX_HANDLE_LENGTH 12
 	// The max length of a relay (server) name
+#define CHANNEL_DEFAULT "Artemis"
 
 //-- Channel Status Flags ------------------------
 
@@ -45,18 +46,17 @@
 #define RESULT_FAILURE 3
 #define ACTION_MALFORMED 4
 #define ACTION_COLLISION 5
-#define ACTION_NONEXIST 6
+#define RESULT_NONEXIST 6
 #define ACTION_UNREACHABLE 7
 //#define ACTION_DEATH 8
 
 #define ACTION_PING 10
 #define ACTION_REGSERVER 11
-#define ACTION_SERVERUPDATE 12
-#define ACTION_DISCONNECT 13
-#define ACTION_REGUSER 14
-#define ACTION_BADUSER 15
-#define ACTION_CONFLICT 16
-#define ACTION_CHANSYNC 17
+#define ACTION_DISCONNECT 12
+#define ACTION_REGUSER 13
+#define ACTION_BADUSER 14
+#define ACTION_CONFLICT 15
+#define ACTION_CHANSYNC 16
 
 #define ACTION_DENIED 33
 // Message Types I'm sure the user can send:

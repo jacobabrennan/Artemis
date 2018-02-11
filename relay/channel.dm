@@ -17,12 +17,12 @@ relay/channel
 
 	proc
 		add(userName)
-			var/relay/user/U = relay.getUser(userName)
-			if(!U) return
+			var/relay/user/joinUser = relay.getUser(userName)
+			if(!joinUser) return
 			if(!activeUsers.len)
 				userPermissions[userName] = PERMISSION_OWNER
-			activeUsers += userName
-			U.channelAdd(name)
+			activeUsers.Add(userName)
+			joinUser.channelAdd(name)
 			relay.route(new /relay/msg(SYSTEM, "[userName]#[name]", ACTION_TRAFFIC, "topic=[url_encode(topic)];"))
 			if(!findtextEx(userName, "."))
 				localUsers += userName
@@ -32,9 +32,9 @@ relay/channel
 		remove(userName)
 			activeUsers -= userName
 			localUsers -= userName
-			var /relay/user/U = relay.getUser(userName)
-			if(U)
-				U.channelRemove(name)
+			var /relay/user/removeUser = relay.getUser(userName)
+			if(removeUser)
+				removeUser.channelRemove(name)
 			if(!activeUsers.len)
 				spawn()
 					relay.channels.Remove(name)

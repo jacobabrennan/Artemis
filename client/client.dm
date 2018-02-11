@@ -23,24 +23,25 @@ client
 		var userName = relay.validId(ckey)
 		var result = relay.registerUser(userName)
 		if(result != RESULT_SUCCESS)
-			alert({"The server has denied registration for the user "[userName]". Error [result]"})
+			alert(src, {"The server has denied registration for the user "[userName]". Error [result]"})
 			winset(src, null, "command=.quit")
 			del src
 		user = relay.getUser(userName)
 		if(!user)
-			alert({"There has been a registration error with your username "[userName]"."})
+			alert(src, {"There has been a registration error with your username "[userName]"."})
 			winset(src, null, "command=.quit")
+			del src
 		user.intelligence = src
 		preferencesLoad()
 		sleep(5)
 		//var/pref_body = {"nickname=[key]"}
 		//if(user.color_name){ pref_body += {"color_name=[user.color_name]"}}
 		//if(user.color_text){ pref_body += {"color_text=[user.color_text]"}}
-		//relay.route(new /relay/msg(user.fullName, SYSTEM, ACTION_PREFERENCES, pref_body))
+		//relay.route(new /relay/msg(user.nameFull, SYSTEM, ACTION_PREFERENCES, pref_body))
 		if(preferences.home_channel)
 			join(preferences.home_channel)
 		else
-			join("Sessions")
+			join(CHANNEL_DEFAULT)
 
 client/proc
 

@@ -60,7 +60,7 @@ client
 			set name = ".chat"
 			if(current_room)
 				if(copytext(current_room, 1, 2) == "#")
-					relay.route(new /relay/msg(user.fullName, current_room, ACTION_MESSAGE, what))
+					relay.route(new /relay/msg(user.nameFull, current_room, ACTION_MESSAGE, what))
 				else
 					msg(current_room, what)
 
@@ -70,14 +70,14 @@ client
 			if(!target)
 				info({"The user "[who]" does not exist. You may be using a nickname instead of a network name."})
 				return
-			var/relay/msg/M = new(user.fullName, target.fullName, ACTION_MESSAGE, what)
+			var/relay/msg/M = new(user.nameFull, target.nameFull, ACTION_MESSAGE, what)
 			relay.route(M)
 			echo(M)
 
 		emote(what as text)
 			set name = ".emote"
 			if(!current_room) return
-			var/relay/msg/M = new(user.fullName, current_room, ACTION_EMOTE, what)
+			var/relay/msg/M = new(user.nameFull, current_room, ACTION_EMOTE, what)
 			relay.route(M)
 			if(copytext(current_room, 1, 2) != "#")
 				echo(M)
@@ -127,7 +127,7 @@ client
 			set name = ".join"
 			var/relay/channel/C = relay.getChannel(channel)
 			if(C) channel = C.name
-			relay.route(new /relay/msg(user.fullName, "#[channel]", ACTION_JOIN))
+			relay.route(new /relay/msg(user.nameFull, "#[channel]", ACTION_JOIN))
 			if(!C) C = relay.getChannel(channel)
 			if(!C) return
 			//add_room(C.name, TRUE)
@@ -139,7 +139,7 @@ client
 				channel = current_room
 			var/relay/channel/C = relay.getChannel(channel)
 			if(C)
-				relay.route(new /relay/msg(user.fullName, "#[C.name]", ACTION_LEAVE))
+				relay.route(new /relay/msg(user.nameFull, "#[C.name]", ACTION_LEAVE))
 				roomRemove("#[C.name]")
 			else
 				roomRemove(channel)
@@ -170,52 +170,52 @@ client
 			if(!C) return
 			var/status = C.status
 			var/p_level = C.permissionLevel(username)
-			if(U) username = U.fullName
+			if(U) username = U.nameFull
 			switch(lowertext(action))
 				if("topic")
-					relay.route(new /relay/msg(user.fullName, channel, ACTION_OPERATE, "topic=[url_encode(value)];"))
+					relay.route(new /relay/msg(user.nameFull, channel, ACTION_OPERATE, "topic=[url_encode(value)];"))
 				if("block")
 					var/newp = value? PERMISSION_BLOCKED : PERMISSION_NORMAL
-					relay.route(new /relay/msg(user.fullName, channel, ACTION_OPERATE, "user=[username]:[newp];"))
+					relay.route(new /relay/msg(user.nameFull, channel, ACTION_OPERATE, "user=[username]:[newp];"))
 				if("mute")
 					if(p_level == PERMISSION_BLOCKED)
-						relay.route(new /relay/msg(SYSTEM, "[user.fullName][channel]", ACTION_DENIED, "You cannot mute [username], the user is already blocked."))
+						relay.route(new /relay/msg(SYSTEM, "[user.nameFull][channel]", ACTION_DENIED, "You cannot mute [username], the user is already blocked."))
 						return
 					var/newp = value? PERMISSION_MUTED : PERMISSION_NORMAL
-					relay.route(new /relay/msg(user.fullName, channel, ACTION_OPERATE, "user=[username]:[newp];"))
+					relay.route(new /relay/msg(user.nameFull, channel, ACTION_OPERATE, "user=[username]:[newp];"))
 				if("voice")
 					if(p_level > PERMISSION_VOICED)
-						relay.route(new /relay/msg(SYSTEM, "[user.fullName][channel]", ACTION_DENIED, "You cannot voice [username], the user already has a higher permission level."))
+						relay.route(new /relay/msg(SYSTEM, "[user.nameFull][channel]", ACTION_DENIED, "You cannot voice [username], the user already has a higher permission level."))
 						return
 					var/newp = value? PERMISSION_VOICED : PERMISSION_NORMAL
-					relay.route(new /relay/msg(user.fullName, channel, ACTION_OPERATE, "user=[username]:[newp];"))
+					relay.route(new /relay/msg(user.nameFull, channel, ACTION_OPERATE, "user=[username]:[newp];"))
 				if("operator")
 					if(p_level > PERMISSION_OPERATOR)
-						relay.route(new /relay/msg(SYSTEM, "[user.fullName][channel]", ACTION_DENIED, "You cannot make [username] an operator, the user already has a higher permission level."))
+						relay.route(new /relay/msg(SYSTEM, "[user.nameFull][channel]", ACTION_DENIED, "You cannot make [username] an operator, the user already has a higher permission level."))
 						return
 					var/newp = value? PERMISSION_OPERATOR : PERMISSION_NORMAL
-					relay.route(new /relay/msg(user.fullName, channel, ACTION_OPERATE, "user=[username]:[newp];"))
+					relay.route(new /relay/msg(user.nameFull, channel, ACTION_OPERATE, "user=[username]:[newp];"))
 				if("owner")
-					if(p_level == PERMISSION_OWNER && username != user.fullName)
-						relay.route(new /relay/msg(SYSTEM, "[user.fullName][channel]", ACTION_DENIED, "You cannot [username]'s permission level, the user is a channel owner."))
+					if(p_level == PERMISSION_OWNER && username != user.nameFull)
+						relay.route(new /relay/msg(SYSTEM, "[user.nameFull][channel]", ACTION_DENIED, "You cannot [username]'s permission level, the user is a channel owner."))
 						return
 					var/newp = value? PERMISSION_OWNER : PERMISSION_NORMAL
-					relay.route(new /relay/msg(user.fullName, channel, ACTION_OPERATE, "user=[username]:[newp];"))
+					relay.route(new /relay/msg(user.nameFull, channel, ACTION_OPERATE, "user=[username]:[newp];"))
 				if("locked")
 					var/new_s
 					if(value){ new_s = status |  STATUS_LOCKED}
 					else{      new_s = status & ~STATUS_LOCKED}
-					relay.route(new /relay/msg(user.fullName, channel, ACTION_OPERATE, "status=[new_s];"))
+					relay.route(new /relay/msg(user.nameFull, channel, ACTION_OPERATE, "status=[new_s];"))
 				if("closed")
 					var/new_s
 					if(value) new_s = status |  STATUS_CLOSED
 					else      new_s = status & ~STATUS_CLOSED
-					relay.route(new /relay/msg(user.fullName, channel, ACTION_OPERATE, "status=[new_s];"))
+					relay.route(new /relay/msg(user.nameFull, channel, ACTION_OPERATE, "status=[new_s];"))
 				if("hidden")
 					var/new_s
 					if(value){ new_s = status |  STATUS_HIDDEN}
 					else{      new_s = status & ~STATUS_HIDDEN}
-					relay.route(new /relay/msg(user.fullName, channel, ACTION_OPERATE, "status=[new_s];"))
+					relay.route(new /relay/msg(user.nameFull, channel, ACTION_OPERATE, "status=[new_s];"))
 
 
 //------------------------------------------------------------------------------
