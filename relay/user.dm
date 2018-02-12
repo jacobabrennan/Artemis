@@ -20,9 +20,9 @@ relay/user
 		if(nameFull)
 			var/relay/user/U = relay.getUser(nameFull)
 			if(U == src)
-				relay.users.Remove(nameFull)
-				if(relay.nicknames[lowertext(nickname)] == nameFull)
-					relay.nicknames.Remove(lowertext(nickname))
+				relay.namedUsers.Remove(nameFull)
+				if(relay.nicknamedUsers[lowertext(nickname)] == nameFull)
+					relay.nicknamedUsers.Remove(lowertext(nickname))
 		. = ..()
 
 	proc
@@ -49,9 +49,9 @@ relay/user
 		drop()
 			for(var/chanName in channels)
 				relay.route(new /relay/msg(nameFull, "#[chanName]", ACTION_LEAVE))
-			relay.users -= nameFull
-			if(relay.nicknames[lowertext(nickname)] == nameFull)
-				relay.nicknames -= lowertext(nickname)
+			relay.namedUsers -= nameFull
+			if(relay.nicknamedUsers[lowertext(nickname)] == nameFull)
+				relay.nicknamedUsers -= lowertext(nickname)
 			del src
 
 		channelAdd(chan_name)

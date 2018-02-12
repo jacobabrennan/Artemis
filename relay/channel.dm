@@ -37,7 +37,7 @@ relay/channel
 				removeUser.channelRemove(name)
 			if(!activeUsers.len)
 				spawn()
-					relay.channels.Remove(name)
+					relay.namedChannels.Remove(name)
 					del src
 			for(var/localUser in localUsers)
 				relay.route(new /relay/msg(SYSTEM, "[localUser]#[name]", ACTION_TRAFFIC, "leave=[userName];"))
@@ -116,7 +116,7 @@ relay/channel
 								else
 									var/list/userPath = relay.text2list(userName, ".")
 									var/_proxy = userPath[userPath.len]
-									if(_proxy == relay.rootServer.handle)
+									if(_proxy == relay.handle)
 										userPath.Cut(userPath.len)
 										userName = relay.list2text(userPath, ".")
 									else

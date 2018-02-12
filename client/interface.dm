@@ -173,7 +173,7 @@ client
 				winset(src, "pref_naming.name_error", "is-visible='true';text='This nickname is invalid';")
 				winset(src, "preferences.pref_tabs", "current-tab='pref_naming'")
 				return
-			else if(lowertext(new_nick) in relay.nicknames && relay.nicknames[lowertext(new_nick)] != user.nameFull)
+			else if(lowertext(new_nick) in relay.nicknamedUsers && relay.nicknamedUsers[lowertext(new_nick)] != user.nameFull)
 				winset(src, "pref_naming.name_error", "is-visible='true';text='This nickname is taken';")
 				winset(src, "preferences.pref_tabs", "current-tab='pref_naming'")
 				return

@@ -5,12 +5,11 @@ client
 		if(words[1] == "c")
 			relay.connect("127.0.0.1:1000")
 		if(words[1] == "d")
-			relay.servers["ceres"].drop()
-			relay.servers.Remove("ceres")
-			relay.passwords.Remove("ceres")
+			relay.namedServers["ceres"].drop()
+			relay.namedServers.Remove("ceres")
 		if(words[1] == "e")
 			DIAG("All Users: ")
-			for(var/userName in relay.users)
+			for(var/userName in relay.namedUsers)
 				DIAG("  [userName]")
 
 
@@ -34,7 +33,7 @@ world/New()
 		if(1002) relayHandle = "pallas"
 	//
 	relay = new(relayHandle)
-	world << {"Server "[relay.rootServer.handle]" opened on port [port]."}
+	world << {"Server "[relay.handle]" opened on port [port]."}
 	world << {"Address:: [world.internet_address]:[world.port] \n\n"}
 	//
 	var/bot/logger/sally = new()

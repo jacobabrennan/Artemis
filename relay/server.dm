@@ -10,7 +10,6 @@ relay/server
 		// Registration of remote SYSTEM users should happen here
 	var
 		handle
-		password
 		address
 		list/users = new()
 	Del()
@@ -39,10 +38,7 @@ relay/server
 		addUser(name)
 			//var nameFull = "[simpleName].[handle]"
 			var /relay/user/newUser = new()
-			if(src != relay.rootServer)
-				newUser.setName(name, handle)
-				newUser.isRemote = TRUE
-			else
-				newUser.setName(name, null)
+			newUser.setName(name, handle)
+			newUser.isRemote = TRUE
 			users.Add(newUser)
 			return newUser

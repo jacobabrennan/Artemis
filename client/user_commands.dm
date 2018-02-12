@@ -88,18 +88,18 @@ client
 
 		whois(who as text)
 			set name = ".whois"
-			var/_full = relay.nicknames[lowertext(who)]
+			var/_full = relay.nicknamedUsers[lowertext(who)]
 			if(!_full)
 				info({"There is no user "[who]""})
 				return
-			info({"The nickname "[who]" is registered to &lt;[relay.nicknames[lowertext(who)]]&gt;"})
+			info({"The nickname "[who]" is registered to &lt;[relay.nicknamedUsers[lowertext(who)]]&gt;"})
 
 		chanlist()
 			set name = ".list"
 			var/chan_text = {"Visible Channels:"}
 			var/list/sorted_channels = new()
-			for(var/chan_name in relay.channels)
-				sorted_channels += relay.channels[chan_name]
+			for(var/chan_name in relay.namedChannels)
+				sorted_channels += relay.namedChannels[chan_name]
 			sorted_channels = dd_sortedObjectList(sorted_channels)
 			for(var/relay/channel/C in sorted_channels)
 				var/status = {""}
