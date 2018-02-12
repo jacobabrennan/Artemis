@@ -26,6 +26,11 @@ relay/user
 		. = ..()
 
 	proc
+
+		msg(_target, _action, _body, _time)
+			var /relay/msg/newMsg = new(nameFull, _target, _action, _body, _time)
+			return relay.route(newMsg)
+
 		setName(newLocalName, newHostName)
 			nameSimple = relay.validId(newLocalName)
 			nameHost = newHostName
@@ -48,7 +53,7 @@ relay/user
 
 		drop()
 			for(var/chanName in channels)
-				relay.route(new /relay/msg(nameFull, "#[chanName]", ACTION_LEAVE))
+				msg("#[chanName]", ACTION_LEAVE)
 			relay.namedUsers -= nameFull
 			if(relay.nicknamedUsers[lowertext(nickname)] == nameFull)
 				relay.nicknamedUsers -= lowertext(nickname)

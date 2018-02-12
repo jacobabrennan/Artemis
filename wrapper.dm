@@ -40,9 +40,9 @@ world/New()
 	sally.channel = "artemis"
 	relay.registerUser("sally", null, sally)
 	sally.user = relay.getUser("sally")
-	relay.route(new /relay/msg("sally", SYSTEM, ACTION_NICKNAME, "Sally"))
+	relay.msg("sally", SYSTEM, ACTION_NICKNAME, "Sally")
 	//relay.route(new /relay/msg("sally", SYSTEM, ACTION_PREFERENCES, "nickname=Sally;color_name=#fff;color_text=#f00;"))
-	relay.route(new /relay/msg("sally", "#[sally.channel]", ACTION_JOIN))
+	relay.msg("sally", "#[sally.channel]", ACTION_JOIN)
 
 client
 	Del()

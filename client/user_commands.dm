@@ -60,7 +60,7 @@ client
 			set name = ".chat"
 			if(current_room)
 				if(copytext(current_room, 1, 2) == "#")
-					relay.route(new /relay/msg(user.nameFull, current_room, ACTION_MESSAGE, what))
+					user.msg(current_room, ACTION_MESSAGE, what)
 				else
 					msg(current_room, what)
 
@@ -127,7 +127,7 @@ client
 			set name = ".join"
 			var/relay/channel/C = relay.getChannel(channel)
 			if(C) channel = C.name
-			relay.route(new /relay/msg(user.nameFull, "#[channel]", ACTION_JOIN))
+			user.msg("#[channel]", ACTION_JOIN)
 			if(!C) C = relay.getChannel(channel)
 			if(!C) return
 			//add_room(C.name, TRUE)
@@ -139,7 +139,7 @@ client
 				channel = current_room
 			var/relay/channel/C = relay.getChannel(channel)
 			if(C)
-				relay.route(new /relay/msg(user.nameFull, "#[C.name]", ACTION_LEAVE))
+				user.msg("#[C.name]", ACTION_LEAVE)
 				roomRemove("#[C.name]")
 			else
 				roomRemove(channel)
@@ -173,49 +173,49 @@ client
 			if(U) username = U.nameFull
 			switch(lowertext(action))
 				if("topic")
-					relay.route(new /relay/msg(user.nameFull, channel, ACTION_OPERATE, "topic=[url_encode(value)];"))
+					user.msg(channel, ACTION_OPERATE, "topic=[url_encode(value)];")
 				if("block")
 					var/newp = value? PERMISSION_BLOCKED : PERMISSION_NORMAL
-					relay.route(new /relay/msg(user.nameFull, channel, ACTION_OPERATE, "user=[username]:[newp];"))
+					user.msg(channel, ACTION_OPERATE, "user=[username]:[newp];")
 				if("mute")
 					if(p_level == PERMISSION_BLOCKED)
-						relay.route(new /relay/msg(SYSTEM, "[user.nameFull][channel]", ACTION_DENIED, "You cannot mute [username], the user is already blocked."))
+						relay.msg(SYSTEM, "[user.nameFull][channel]", ACTION_DENIED, "You cannot mute [username], the user is already blocked.")
 						return
 					var/newp = value? PERMISSION_MUTED : PERMISSION_NORMAL
-					relay.route(new /relay/msg(user.nameFull, channel, ACTION_OPERATE, "user=[username]:[newp];"))
+					user.msg(channel, ACTION_OPERATE, "user=[username]:[newp];")
 				if("voice")
 					if(p_level > PERMISSION_VOICED)
-						relay.route(new /relay/msg(SYSTEM, "[user.nameFull][channel]", ACTION_DENIED, "You cannot voice [username], the user already has a higher permission level."))
+						relay.msg(SYSTEM, "[user.nameFull][channel]", ACTION_DENIED, "You cannot voice [username], the user already has a higher permission level.")
 						return
 					var/newp = value? PERMISSION_VOICED : PERMISSION_NORMAL
-					relay.route(new /relay/msg(user.nameFull, channel, ACTION_OPERATE, "user=[username]:[newp];"))
+					user.msg(channel, ACTION_OPERATE, "user=[username]:[newp];")
 				if("operator")
 					if(p_level > PERMISSION_OPERATOR)
-						relay.route(new /relay/msg(SYSTEM, "[user.nameFull][channel]", ACTION_DENIED, "You cannot make [username] an operator, the user already has a higher permission level."))
+						relay.msg(SYSTEM, "[user.nameFull][channel]", ACTION_DENIED, "You cannot make [username] an operator, the user already has a higher permission level.")
 						return
 					var/newp = value? PERMISSION_OPERATOR : PERMISSION_NORMAL
-					relay.route(new /relay/msg(user.nameFull, channel, ACTION_OPERATE, "user=[username]:[newp];"))
+					user.msg(channel, ACTION_OPERATE, "user=[username]:[newp];")
 				if("owner")
 					if(p_level == PERMISSION_OWNER && username != user.nameFull)
-						relay.route(new /relay/msg(SYSTEM, "[user.nameFull][channel]", ACTION_DENIED, "You cannot [username]'s permission level, the user is a channel owner."))
+						relay.msg(SYSTEM, "[user.nameFull][channel]", ACTION_DENIED, "You cannot [username]'s permission level, the user is a channel owner.")
 						return
 					var/newp = value? PERMISSION_OWNER : PERMISSION_NORMAL
-					relay.route(new /relay/msg(user.nameFull, channel, ACTION_OPERATE, "user=[username]:[newp];"))
+					user.msg(channel, ACTION_OPERATE, "user=[username]:[newp];")
 				if("locked")
 					var/new_s
 					if(value){ new_s = status |  STATUS_LOCKED}
 					else{      new_s = status & ~STATUS_LOCKED}
-					relay.route(new /relay/msg(user.nameFull, channel, ACTION_OPERATE, "status=[new_s];"))
+					user.msg(channel, ACTION_OPERATE, "status=[new_s];")
 				if("closed")
 					var/new_s
 					if(value) new_s = status |  STATUS_CLOSED
 					else      new_s = status & ~STATUS_CLOSED
-					relay.route(new /relay/msg(user.nameFull, channel, ACTION_OPERATE, "status=[new_s];"))
+					user.msg(channel, ACTION_OPERATE, "status=[new_s];")
 				if("hidden")
 					var/new_s
 					if(value){ new_s = status |  STATUS_HIDDEN}
 					else{      new_s = status & ~STATUS_HIDDEN}
-					relay.route(new /relay/msg(user.nameFull, channel, ACTION_OPERATE, "status=[new_s];"))
+					user.msg(channel, ACTION_OPERATE, "status=[new_s];")
 
 
 //------------------------------------------------------------------------------

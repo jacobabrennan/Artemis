@@ -23,11 +23,11 @@ relay/channel
 				userPermissions[userName] = PERMISSION_OWNER
 			activeUsers.Add(userName)
 			joinUser.channelAdd(name)
-			relay.route(new /relay/msg(SYSTEM, "[userName]#[name]", ACTION_TRAFFIC, "topic=[url_encode(topic)];"))
+			relay.msg(SYSTEM, "[userName]#[name]", ACTION_TRAFFIC, "topic=[url_encode(topic)];")
 			if(!findtextEx(userName, "."))
 				localUsers += userName
 			for(var/localUser in localUsers)
-				relay.route(new /relay/msg(SYSTEM, "[localUser]#[name]", ACTION_TRAFFIC, "join=[userName];"))
+				relay.msg(SYSTEM, "[localUser]#[name]", ACTION_TRAFFIC, "join=[userName];")
 
 		remove(userName)
 			activeUsers -= userName
@@ -40,7 +40,7 @@ relay/channel
 					relay.namedChannels.Remove(name)
 					del src
 			for(var/localUser in localUsers)
-				relay.route(new /relay/msg(SYSTEM, "[localUser]#[name]", ACTION_TRAFFIC, "leave=[userName];"))
+				relay.msg(SYSTEM, "[localUser]#[name]", ACTION_TRAFFIC, "leave=[userName];")
 	proc
 		receive(relay/msg/msg)
 			. = RESULT_SUCCESS // Important! Will not route to other servers without this value returned
@@ -60,17 +60,17 @@ relay/channel
 		actionMessage(relay/msg/msg)
 			if(!canSpeak(msg.sender))
 				spawn()
-					relay.route(new /relay/msg(SYSTEM, "[msg.sender]#[name]", ACTION_DENIED, "You do not have permission to send messages to this channel."))
+					relay.msg(SYSTEM, "[msg.sender]#[name]", ACTION_DENIED, "You do not have permission to send messages to this channel.")
 				return ACTION_DENIED
 			for(var/userName in localUsers)
-				relay.route(new /relay/msg(msg.sender, "[userName]#[name]", msg.action, msg.body, msg.time))
+				relay.msg(msg.sender, "[userName]#[name]", msg.action, msg.body, msg.time)
 
 		actionJoin(relay/msg/msg)
 			if(msg.sender in activeUsers)
 				return RESULT_FAILURE
 			if(permissionLevel(msg.sender) <= PERMISSION_BLOCKED)
 				spawn()
-					relay.route(new /relay/msg(SYSTEM, "[msg.sender]#[name]", ACTION_DENIED, "You do not have permission to join this channel."))
+					relay.msg(SYSTEM, "[msg.sender]#[name]", ACTION_DENIED, "You do not have permission to join this channel.")
 				return ACTION_DENIED
 			add(msg.sender)
 			return RESULT_SUCCESS
@@ -85,7 +85,7 @@ relay/channel
 			// Cancel out if the msg sender doesn't have appropriate permissions
 			if(!canOperate(msg.sender))
 				spawn()
-					relay.route(new /relay/msg(SYSTEM, "[msg.sender]#[name]", ACTION_DENIED, "You do not have permission to operate this channel."))
+					relay.msg(SYSTEM, "[msg.sender]#[name]", ACTION_DENIED, "You do not have permission to operate this channel.")
 				return ACTION_DENIED
 			//
 			var/list/params = params2list(lowertext(msg.body))
@@ -96,11 +96,11 @@ relay/channel
 						value &= (STATUS_CLOSED | STATUS_LOCKED | STATUS_HIDDEN)
 						status = value
 						for(var/user_name in activeUsers)
-							relay.route(new /relay/msg(SYSTEM, "[user_name]#[name]", ACTION_TRAFFIC, "status=[status];"))
+							relay.msg(SYSTEM, "[user_name]#[name]", ACTION_TRAFFIC, "status=[status];")
 					if("topic")
 						topic = url_decode(params[index])
 						for(var/user_name in localUsers)
-							relay.route(new /relay/msg(SYSTEM, "[user_name]#[name]", ACTION_TRAFFIC, "topic=[url_encode(topic)];"))
+							relay.msg(SYSTEM, "[user_name]#[name]", ACTION_TRAFFIC, "topic=[url_encode(topic)];")
 					if("user")
 						var usersList = params[index]
 						var newList = {""}
@@ -132,7 +132,7 @@ relay/channel
 							newList += "[userName]:[newPermission]"
 							newPermission = max(0, min(PERMISSION_OWNER, newPermission))
 							for(var/_name in localUsers)
-								relay.route(new /relay/msg(SYSTEM, "[_name]#[name]", ACTION_TRAFFIC, "user=[userName]:[newPermission]"))
+								relay.msg(SYSTEM, "[_name]#[name]", ACTION_TRAFFIC, "user=[userName]:[newPermission]")
 							if((newPermission <= PERMISSION_BLOCKED) && (userName in activeUsers))
 								remove(userName)
 						params[index] = newList

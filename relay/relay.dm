@@ -71,7 +71,7 @@ relay
 				var /relay/server/proxy = getServer(serverHandle)
 				var nameFull = "[simpleName].[serverHandle]"
 				if(nameFull in namedUsers)
-					DIAG("Conflict: [nameFull] ([simpleName].[serverHandle])")
+					DIAG("Conflict: [nameFull]")
 					return ACTION_CONFLICT
 				if(!proxy)
 					DIAG("No Proxy: [simpleName], [serverHandle]. ([serverHandle] != [handle])")
@@ -150,7 +150,7 @@ relay
 			if(_response)
 				DIAG("Response Success")
 				return RESULT_SUCCESS
-			route(new /relay/msg(SYSTEM, "[SYSTEM].[remoteHandle]", ACTION_REGSERVER, "response=true;handle=[handle];"))
+			msg(SYSTEM, "[SYSTEM].[remoteHandle]", ACTION_REGSERVER, "response=true;handle=[handle];")
 			// Generate information about all users on this server (except SYSTEM user)
 			var /list/usersList = list()
 			var /list/prefsList = new()
@@ -161,11 +161,11 @@ relay
 					prefsList.Add(new /relay/msg(localUser.nameSimple, "[SYSTEM].[remoteHandle]", ACTION_NICKNAME, localUser.nickname))
 			// Send users list, channels list, and user nicknames
 			spawn(1)
-				route(new /relay/msg(SYSTEM, "[SYSTEM].[remoteHandle]", ACTION_REGUSER, list2text(usersList, " ")))
+				msg(SYSTEM, "[SYSTEM].[remoteHandle]", ACTION_REGUSER, list2text(usersList, " "))
 				spawn(1)
 					for(var/channelName in namedChannels)
 						var/relay/channel/theChannel = namedChannels[channelName]
-						route(new /relay/msg(SYSTEM, "[SYSTEM].[remoteHandle]", ACTION_CHANSYNC, theChannel.chan2string()))
+						msg(SYSTEM, "[SYSTEM].[remoteHandle]", ACTION_CHANSYNC, theChannel.chan2string())
 					spawn(1)
 						for(var/relay/msg/indexedMessage in prefsList)
 							sleep(0)
@@ -200,10 +200,10 @@ relay
 					if(ACTION_CONFLICT) conflicts += user_name
 			if(conflicts.len)
 				spawn()
-					route(new /relay/msg(SYSTEM, "[SYSTEM].[remote_handle]", ACTION_CONFLICT, list2text(conflicts, " ")))
+					msg(SYSTEM, "[SYSTEM].[remote_handle]", ACTION_CONFLICT, list2text(conflicts, " "))
 			if(bad_users.len)
 				spawn()
-					route(new /relay/msg(SYSTEM, "[SYSTEM].[remote_handle]", ACTION_BADUSER, list2text(bad_users, " ")))
+					msg(SYSTEM, "[SYSTEM].[remote_handle]", ACTION_BADUSER, list2text(bad_users, " "))
 
 		actionChannelSync(relay/msg/msg)
 			var /list/sender_path = text2list(lowertext(msg.sender), ".")
@@ -222,18 +222,18 @@ relay
 					var/msg_body = "!response=1;" + C.chan2string()
 					sync_message = new(SYSTEM, remote_sysuser, ACTION_CHANSYNC, msg_body)
 			if(!isnum(new_status)) new_status = STATUS_NORMAL
-			route(new /relay/msg(remote_sysuser, "#[chan_name]", ACTION_JOIN))
-			route(new /relay/msg(remote_sysuser, "#[chan_name]", ACTION_OPERATE, "status=[new_status];topic=[_topic]"))
+			msg(remote_sysuser, "#[chan_name]", ACTION_JOIN)
+			msg(remote_sysuser, "#[chan_name]", ACTION_OPERATE, "status=[new_status];topic=[_topic]")
 			params.Remove("!name","!status","!response","!topic")
 			for(var/user_name in params)
 				if(!user_name in namedUsers) continue
 				var user_permission = text2num(params[user_name])
 				if(user_permission & PERMISSION_ACTIVEFLAG)
-					route(new /relay/msg("[user_name].[remote_handle]", "#[chan_name]", ACTION_JOIN))
+					msg("[user_name].[remote_handle]", "#[chan_name]", ACTION_JOIN)
 					user_permission &= ~PERMISSION_ACTIVEFLAG
 				if(user_permission)
-					route(new /relay/msg(remote_sysuser, "#[chan_name]", ACTION_OPERATE, "user=[user_name].[remote_handle]:[user_permission];"))
-			route(new /relay/msg(remote_sysuser, "#[chan_name]", ACTION_LEAVE))
+					msg(remote_sysuser, "#[chan_name]", ACTION_OPERATE, "user=[user_name].[remote_handle]:[user_permission];")
+			msg(remote_sysuser, "#[chan_name]", ACTION_LEAVE)
 			if(sync_message)
 				route(sync_message)
 
@@ -269,7 +269,7 @@ relay
 					var/relay/channel/joinedChannel = relay.getChannel(channelName)
 					if(!istype(joinedChannel)) continue
 					for(var/channelUser in joinedChannel.localUsers)
-						route(new /relay/msg(SYSTEM, "[channelUser]#[joinedChannel.name]", ACTION_TRAFFIC, t_body))
+						msg(SYSTEM, "[channelUser]#[joinedChannel.name]", ACTION_TRAFFIC, t_body)
 			// Relay msg to all dependent servers (except the origin of the message)
 			var /list/senderPath = text2list(lowertext(msg.sender), ".")
 			var originHandle
@@ -277,10 +277,14 @@ relay
 				originHandle = senderPath[senderPath.len]
 			for(var/loopHandle in namedServers)
 				if(loopHandle == handle || originHandle == loopHandle) continue
-				route(new /relay/msg(msg.sender, "[SYSTEM].[loopHandle]", ACTION_NICKNAME, newNickname))
+				msg(msg.sender, "[SYSTEM].[loopHandle]", ACTION_NICKNAME, newNickname)
 
 	//------------------------------------------------
 	proc
+
+		msg(_sender, _target, _action, _body, _time)
+			return route(new /relay/msg(_sender, _target, _action, _body, _time))
+
 		route(relay/msg/msg)
 			if(!handle) return
 			// Output some diagnostic information
@@ -425,13 +429,13 @@ relay
 			if(!_handle)
 				for(var/loopHandle in namedServers)
 					if(loopHandle == handle) continue
-					route(new /relay/msg(SYSTEM, "[SYSTEM].[loopHandle]", ACTION_DISCONNECT))
-					route(new /relay/msg("[SYSTEM].[loopHandle]", SYSTEM, ACTION_DISCONNECT))
+					msg(SYSTEM, "[SYSTEM].[loopHandle]", ACTION_DISCONNECT)
+					msg("[SYSTEM].[loopHandle]", SYSTEM, ACTION_DISCONNECT)
 			else
 				var/relay/server/S = getServer(_handle)
 				if(S)
-					route(new /relay/msg(SYSTEM, "[SYSTEM].[_handle]", ACTION_DISCONNECT))
-					route(new /relay/msg("[SYSTEM].[_handle]", SYSTEM, ACTION_DISCONNECT))
+					msg(SYSTEM, "[SYSTEM].[_handle]", ACTION_DISCONNECT)
+					msg("[SYSTEM].[_handle]", SYSTEM, ACTION_DISCONNECT)
 
 	//-- Export/Import - Convert Topics to Messages --
 	proc

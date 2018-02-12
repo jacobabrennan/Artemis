@@ -433,7 +433,7 @@ client
 client
 	proc
 		nicknameSend()
-			relay.route(new /relay/msg(user.nameFull, SYSTEM, ACTION_NICKNAME, preferences.nickname))
+			user.msg(SYSTEM, ACTION_NICKNAME, preferences.nickname)
 
 		preferencesLoad()
 			preferences = new(src)
