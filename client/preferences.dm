@@ -306,7 +306,7 @@ client
 		parent_type = /datum
 		var
 			version = 1
-			client/preferences/skin/skin = "ceres"
+			client/preferences/skin/skin
 			// Nonconfigurable
 			nickname
 			home_channel
@@ -325,6 +325,7 @@ client
 			.=..()
 			client = _client
 			nickname = client.key
+			skin = new()
 
 		//------------------------------------------------
 
@@ -416,7 +417,6 @@ client
 			preferences = new(src)
 			var filePath = "[CERES_PATH_PREFERENCES]/[ckey].json"
 			if(!fexists(filePath))
-				preferences.skin = new()
 				preferences.skin.apply(src)
 				nicknameSend()
 				return
@@ -445,7 +445,7 @@ client
 client/preferences
 	proc
 		fromJSON(list/objectData)
-			if(objectData["version"] >= CERES_PREFERENCES_VERSION)
+			if(objectData["version"] > CERES_PREFERENCES_VERSION)
 				return
 			CERES_LOAD_KEY(nickname)
 			CERES_LOAD_KEY(home_channel)
@@ -456,7 +456,6 @@ client/preferences
 			CERES_LOAD_KEY(daylight)
 			CERES_LOAD_KEY(colorName)
 			CERES_LOAD_KEY(colorText)
-			skin = new()
 			skin.fromJSON(objectData["skin"])
 			skin.apply(client)
 
@@ -491,7 +490,7 @@ client/preferences/skin
 			return objectData
 
 		fromJSON(list/objectData)
-			if(objectData["version"] >= CERES_PREFERENCES_VERSION)
+			if(objectData["version"] > CERES_PREFERENCES_VERSION)
 				return
 			CERES_LOAD_KEY(chat_font)
 			CERES_LOAD_KEY(font_size)

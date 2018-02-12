@@ -60,7 +60,7 @@ artemis
 		removeUser(artemis/user/oldUser)
 			if(istext(oldUser))
 				oldUser = getUser(oldUser)
-			if(oldUser in localUsers)
+			if(!oldUser.nameHost)
 				oldUser.drop()
 				return TRUE
 			return FALSE
@@ -125,6 +125,7 @@ artemis
 			// Ensure sender is valid on this artemis
 			if(!(msg.sender in namedUsers))
 				DIAG("Bad User: [msg.sender]")
+				CRASH("Bad User: [msg.sender]")
 				return RESULT_BADUSER
 			// Parse Target
 			//var targetSimpleName
@@ -191,15 +192,16 @@ artemis
 			// Handle failure notification from channel
 			if(result != RESULT_SUCCESS)
 				return RESULT_FAILURE
-			// Broadcast to all other servers
-			var /list/senderPath = text2list(msg.sender, ".")
-			var senderHandle = (senderPath.len > 1)? senderPath[senderPath.len] : handle
+			// Broadcast to all other servers (but only local actions)
+			// Check for non locals
+			var /artemis/user/sendingUser = getUser(msg.sender)
+			if(sendingUser.nameHost)
+				return RESULT_SUCCESS
+			// Broadcast
 			for(var/loopHandle in namedServers)
 				var /artemis/server/broadcastServer = namedServers[loopHandle]
-				if(loopHandle == senderHandle) continue
 				export(new /artemis/msg(msg.sender, "[msg.target].[loopHandle]", msg.action, msg.body, msg.time), broadcastServer.address)
 				// ".[loopHandle]" section will be stripped off in import(), making this target valid.
-			return RESULT_SUCCESS
 
 
 //-- System Message Handling ---------------------------------------------------
@@ -405,13 +407,10 @@ artemis
 					if(!istype(joinedChannel)) continue
 					for(var/channelUser in joinedChannel.localUsers)
 						msg(SYSTEM, "[channelUser]#[joinedChannel.name]", ACTION_TRAFFIC, t_body)
-			// artemis msg to all dependent servers (except the origin of the message)
-			var /list/senderPath = text2list(lowertext(sender), ".")
-			var originHandle
-			if(senderPath.len > 1)
-				originHandle = senderPath[senderPath.len]
+			// broadcast msg to all dependent servers (but don't broadcast nonlocal actions)
+			if(sendingUser.nameHost)
+				return
 			for(var/loopHandle in namedServers)
-				if(originHandle == loopHandle) continue
 				msg(sender, "[SYSTEM].[loopHandle]", ACTION_NICKNAME, newNickname)
 
 
@@ -442,7 +441,6 @@ artemis
 			var /list/params = params2list(copytext(remoteReply, colonPosition+1))
 			var remoteHandle = params["handle"]
 			for(var/word in params)
-				DIAG("Word: [word]")
 			if(remoteVersion != "[PROTOCOL_VERSION]") return RESULT_FAILURE
 			if(!remoteHandle)
 				DIAG("Malformed: [remoteHandle], [copytext(remoteReply, colonPosition+1)]")

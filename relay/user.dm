@@ -12,7 +12,6 @@ artemis/user
 		nickname
 		datum/intelligence
 		list/channels = new()
-		isRemote
 
 	Del()
 		if(nameFull)
@@ -30,7 +29,7 @@ artemis/user
 			return artemis.route(newMsg)
 
 		receive(artemis/msg/msg)
-			if(isRemote)
+			if(nameHost)
 				CRASH("Attempt to route Remote User locally: [msg.target],[msg.sender],[msg.action]")
 				return
 			var result
@@ -52,6 +51,7 @@ artemis/user
 			nameSimple = artemis.validId(newLocalName)
 			nameHost = newHostName
 			if(newHostName)
+				ASSERT(newHostName != artemis.handle)
 				nameFull = "[nameSimple].[nameHost]"
 			else
 				nameFull = nameSimple

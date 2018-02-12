@@ -327,6 +327,8 @@ client
 			user.colorName = preferences.colorName
 			user.colorText = preferences.colorText
 			nicknameSend()
+			//
+			preferencesSave()
 
 	//------------------------------------------------
 	show_popup_menus = FALSE

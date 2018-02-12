@@ -21,7 +21,6 @@ artemis/server
 			//var nameFull = "[simpleName].[handle]"
 			var /artemis/user/newUser = new()
 			newUser.setName(name, handle)
-			newUser.isRemote = TRUE
 			users.Add(newUser)
 			return newUser
 

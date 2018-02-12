@@ -2,24 +2,29 @@ client
 	North()
 		. = ..()
 		artemis.connect("127.0.0.1", 1000)
+	Northeast()
+		. = ..()
+		artemis.connect("127.0.0.1", 1001)
+	Northwest()
+		. = ..()
+		artemis.connect("127.0.0.1", 1002)
 	South()
 		. = ..()
 		artemis.disconnect("artemis")
-	East()
+/*	East()
 		. = ..()
 		artemis.closed = TRUE
 	West()
 		. = ..()
 		artemis.closed = FALSE
 
-#include "..\relay\relay.dm"
 artemis
 	var
 		closed = FALSE
 	import()
 		if(closed) return
 		. = ..()
-
+*/
 
 world
 	name = "Artemis"

@@ -151,12 +151,16 @@ artemis/channel
 				topic = "[name] -- Artemis Chat"
 			var/string = {"!name=[name];!status=[status];!topic=[url_encode(topic)]"}
 			for(var/userName in userPermissions)
+				var /artemis/user/permissionUser = artemis.getUser(userName)
+				if(permissionUser.nameHost) continue
 				var/tier = userPermissions[userName]
 				if(userName in activeUsers)
 					tier |= PERMISSION_ACTIVEFLAG
 				string += ";[userName]=[tier]"
 			for(var/userName in activeUsers)
 				if(userName in userPermissions) continue
+				var /artemis/user/permissionUser = artemis.getUser(userName)
+				if(permissionUser.nameHost) continue
 				string += ";[userName]=[PERMISSION_ACTIVEFLAG]"
 			return string
 
