@@ -13,35 +13,27 @@ mob/Logout()
 
 client
 	var
-		relay/user/user
+		artemis/user/user
 		utOffset = -5
 
 	New()
 		set waitfor = FALSE
 		.=..()
 		sleep(10)
-		var userName = relay.validId(ckey)
-		var result = relay.registerUser(userName)
-		if(result != RESULT_SUCCESS)
-			alert(src, {"The server has denied registration for the user "[userName]". Error [result]"})
-			//winset(src, null, "command=.quit")
-			//del src
-		user = relay.getUser(userName)
+		user = artemis.addUser(ckey, src)
 		if(!user)
-			alert(src, {"There has been a registration error with your username "[userName]"."})
+			alert(src, {"There has been a registration error with your username "[ckey]"."})
 			//winset(src, null, "command=.quit")
-			//del src
-		user.intelligence = src
+			del src
 		preferencesLoad()
-		sleep(5)
-		//var/pref_body = {"nickname=[key]"}
-		//if(user.color_name){ pref_body += {"color_name=[user.color_name]"}}
-		//if(user.color_text){ pref_body += {"color_text=[user.color_text]"}}
-		//user.msg(SYSTEM, ACTION_PREFERENCES, pref_body)
 		if(preferences.home_channel)
 			join(preferences.home_channel)
 		else
-			join(CHANNEL_DEFAULT)
+			join(artemis.defaultChannel)
+	Del()
+		if(user)
+			artemis.removeUser(user)
+		. = ..()
 
 client/proc
 

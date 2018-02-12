@@ -1,25 +1,64 @@
 
 
+//-- Preprocessor - See end of file for namespace cleanup ----------------------
+
+#define CERES_PREFERENCES_VERSION 3
+
+#define CERES_PATH_PREFERENCES "data/preferences"
+
+#define CERES_LOAD_KEY(theKey) theKey = objectData[#theKey]
+#define CERES_SAVE_KEY(theKey) objectData[#theKey] = theKey
+
+
+//-- QuickSort - Attributed to AbyssDragon -------
+client
+	proc
+		quickSort(list/unsortedList, low = 1, high = -1)
+			if(high == -1)
+				high = unsortedList.len
+			if(low >= high)
+				return
+			// Find Pivot (folded helper function into main function)
+			var X = unsortedList[high]
+			var I = low -1
+			for(var/J = low to high -1)
+				if(Compare(unsortedList[J], X) > 0)
+					I++
+					unsortedList.Swap(I, J)
+			unsortedList.Swap(I+1, high)
+			var pivot = I + 1
+			//
+			quickSort(unsortedList, low, pivot-1)
+			quickSort(unsortedList, pivot+1, high)
+			//
+			return unsortedList
+
+
+		Compare(client/whoMarker/A, artemis/channel/B)
+			if(istype(A))
+				var client/whoMarker/markB = B
+				return (A.tier - markB.tier)
+			if(istype(B))
+				var artemis/channel/chanA = A
+				return chanA.activeUsers.len - B.activeUsers.len
+
+
 //------------------------------------------------------------------------------
 
-//------------------------------------------------
-relay/user
-	var
-		colorName
-		colorText
 
+//-- Message Handling ----------------------------------------------------------
 
-//------------------------------------------------
+//-- Utility Class -------------------------------
 client
 	var
-		list/code_messages = new()
-	code_message
+		list/codeMessages = new()
+	codeMessage
 		parent_type = /datum
 		var
 			id
 			code
 			sender
-		New(relay/msg/_msg)
+		New(artemis/msg/_msg)
 			id = rand(1,9999)
 			code = _msg.body
 			sender = _msg.sender
@@ -29,10 +68,9 @@ client
 //------------------------------------------------
 client
 	proc
-
-		echo(relay/msg/msg)
+		echo(artemis/msg/msg) // Unrefactored
 			var/tab_channel
-			var/relay/user/target = relay.getUser(msg.target)
+			var/artemis/user/target = artemis.getUser(msg.target)
 			if(!target) return
 			var/hash_pos = findtextEx(msg.target, "#")
 			if(hash_pos)
@@ -53,16 +91,16 @@ client
 					roomFlash(tab_channel)
 				if(ACTION_CODE)
 					if(!msg.body) return
-					var/client/code_message/cm = new(msg)
-					code_messages += cm
+					var /client/codeMessage/cm = new(msg)
+					codeMessages += cm
 					formatted_text = formatUsercode(user, cm, msg.time)
 					roomFlash(tab_channel)
 			src << output(formatted_text, "[tab_channel].output")
 
-		receive(var/relay/msg/msg)
+		receive(var/artemis/msg/msg) // Unrefactored
 			. = TRUE
 			var/tab_channel
-			var/relay/user/sender = relay.getUser(msg.sender)
+			var/artemis/user/sender = artemis.getUser(msg.sender)
 			if(!sender) return
 			var/hash_pos = findtextEx(msg.target, "#")
 			if(hash_pos)
@@ -91,19 +129,13 @@ client
 					roomFlash(tab_channel)
 				if(ACTION_CODE)
 					if(!msg.body) return
-					var/client/code_message/cm = new(msg)
-					code_messages += cm
+					var /client/codeMessage/cm = new(msg)
+					codeMessages += cm
 					formatted_text = formatUsercode(sender, cm, msg.time)
 					roomFlash(tab_channel)
 			src << output(formatted_text, "[tab_channel].output")
 
-	//------------------------------------------------
-	proc
-		formatSystem(body, time)
-			body = html_encode(body)
-			return {"<span class="system">[body]</span>"}
-
-		handleTraffic(tab_channel, relay/msg/msg)
+		handleTraffic(tab_channel, artemis/msg/msg) // Unrefactored
 			var/list/params = params2list(msg.body)
 			var/info
 			var/index = params[1]
@@ -114,7 +146,7 @@ client
 					var/colon_pos = findtextEx(value, ":")
 					if(!colon_pos || colon_pos == 1) return
 					var/user_name = copytext(value, 1, colon_pos)
-					var/relay/user/U = relay.getUser(user_name)
+					var/artemis/user/U = artemis.getUser(user_name)
 					if(!U) return
 					var/old_nick = copytext(value, colon_pos+1)
 					if(old_nick){ info = {" ([old_nick])"}}
@@ -123,14 +155,14 @@ client
 					info = {"[full_span][info] is now known as [new_nick]"}
 					updateWhogrid(tab_channel)
 				if("join")
-					var/relay/user/U = relay.getUser(value)
+					var/artemis/user/U = artemis.getUser(value)
 					if(!U){ return}
 					if(preferences.view_nicks && U.nickname)
 						info = {"[html_encode(U.nickname)] "}
 					info = {"[info]&lt;[U.nameFull]&gt; has connected."}
 					updateWhogrid(tab_channel)
 				if("leave")
-					var/relay/user/U = relay.getUser(value)
+					var/artemis/user/U = artemis.getUser(value)
 					if(!U) return
 					if(preferences.view_nicks && U.nickname)
 						info = {"[html_encode(U.nickname)] "}
@@ -145,7 +177,7 @@ client
 					var/colon_pos = findtextEx(value, ":")
 					if(!colon_pos || colon_pos == 1) return
 					var/user_name = copytext(value, 1, colon_pos)
-					var/relay/user/U = relay.getUser(user_name)
+					var/artemis/user/U = artemis.getUser(user_name)
 					if(!U) return
 					var/_tier = text2num(copytext(value, colon_pos+1))
 					if(!isnum(_tier)) return
@@ -172,18 +204,25 @@ client
 				time_stamp = {"<span class="time_stamp"><span class="traffic">[time_stamp]</span></span>"}
 			return {"[time_stamp] [body_span]"}
 
-		/*format_channel(body, time){
+
+//-- Output Formatting ---------------------------------------------------------
+
+client
+	proc
+		/*format_channel(body, time) // Unrefactored
 			body = html_encode(body)
 			var/time_stamp = {""}
 			var/body_span = {"<span class="traffic">[body]</span>"}
-			if(preferences.time_stamps){
+			if(preferences.time_stamps)
 				time_stamp = time2stamp(time, preferences.time_zone + preferences.daylight)
 				time_stamp = {"<span class="time_stamp"><span class="traffic">[time_stamp]</span></span>"}
-				}
-			return {"[time_stamp] [body_span]"}
-			}*/
+			return {"[time_stamp] [body_span]"}*/
 
-		formatEmote(var/relay/user/sender, body, time)
+		formatSystem(body, time) // Unrefactored
+			body = html_encode(body)
+			return {"<span class="system">[body]</span>"}
+
+		formatEmote(artemis/user/sender, body, time) // Unrefactored
 			body = html_encode(body)
 			var/using_nick = (sender.nickname && preferences.view_nicks)
 			var/sender_span
@@ -205,7 +244,7 @@ client
 			var/full_message = {"[time_stamp]<span class="emote"> *** [sender_span] [message_span]</emote>"}
 			return full_message
 
-		formatUser(var/relay/user/sender, body, time)
+		formatUser(artemis/user/sender, body, time) // Unrefactored
 			body = html_encode(body)
 			var/using_nick = (sender.nickname && preferences.view_nicks)
 			var/sender_span
@@ -229,7 +268,7 @@ client
 			var/full_message = {"[time_stamp][sender_span][separator][message_span]"}
 			return full_message
 
-		formatUsercode(var/relay/user/sender, var/client/code_message/cm, time)
+		formatUsercode(artemis/user/sender, client/codeMessage/cm, time) // Unrefactored
 			var/using_nick = (sender.nickname && preferences.view_nicks)
 			var/sender_span
 			if(using_nick) sender_span = html_encode(sender.nickname)
@@ -252,7 +291,12 @@ client
 			return full_message
 
 
-//------------------------------------------------------------------------------
+//-- Preferences ---------------------------------------------------------------
+
+artemis/user
+	var
+		colorName
+		colorText
 
 client
 	var
@@ -282,50 +326,7 @@ client
 			client = _client
 			nickname = client.key
 
-		proc
-			skinLoad(var/XML/Element/template)
-				skin = new()
-				if(template)
-					skin.imprint(template)
-				skinApply(skin)
-
-			skinApply(var/client/preferences/skin/which)
-				which.apply(client)
-
-			imprint(var/XML/Element/template)
-				version = text2num(template.Attribute("version"))
-				var/XML/Element/child
-				if(version >= 2)
-					child = template.FirstChildElement("nickname")
-					nickname = child.Attribute("value")
-				child = template.FirstChildElement("home_channel")
-				home_channel = child.Attribute("name")
-				child = template.FirstChildElement("show_time_stamps")
-				time_stamps = text2num(child.Attribute("value"))
-				child = template.FirstChildElement("show_traffic")
-				traffic = text2num(child.Attribute("value"))
-				child = template.FirstChildElement("show_colors")
-				show_colors = text2num(child.Attribute("value"))
-				child = template.FirstChildElement("time")
-				time_zone = text2num(child.Attribute("offset"))
-				daylight = text2num(child.Attribute("daylight"))
-				child = template.FirstChildElement("colors")
-				colorName = child.Attribute("name")
-				colorText = child.Attribute("text")
-				child = template.FirstChildElement("skin")
-				skinLoad(child)
-
-			to_xml()
-				var/XML/Element/template = xmlRootFromString({"<preferences version="2" />"})
-				template.AddChild(xmlRootFromString({"<nickname value="[nickname]" />"}))
-				template.AddChild(xmlRootFromString({"<home_channel name="[home_channel]" />"}))
-				template.AddChild(xmlRootFromString({"<show_time_stamps value="[time_stamps? 1 : 0]" />"}))
-				template.AddChild(xmlRootFromString({"<show_traffic value="[traffic? 1 : 0]" />"}))
-				template.AddChild(xmlRootFromString({"<show_colors value="[show_colors? 1 : 0]" />"}))
-				template.AddChild(xmlRootFromString({"<time offset="[time_zone]" daylight="[daylight? 1 : 0]" />"}))
-				template.AddChild(xmlRootFromString({"<colors name="[colorName]" text="[colorText]" />"}))
-				template.AddChild(skin.to_xml())
-				return template
+		//------------------------------------------------
 
 		//------------------------------------------------
 		skin
@@ -343,39 +344,7 @@ client
 				time_stamp = "#999980" // class="time_stamp"
 
 			proc
-				to_xml()
-					var/XML/Element/template = xmlRootFromString({"<skin version="2" />"})
-					template.AddChild(xmlRootFromString({"<chat_font family="[chat_font]" size="[font_size]" />"}))
-					template.AddChild(xmlRootFromString({"<background color="[background]" />"}))
-					template.AddChild(xmlRootFromString({"<user_message color="[user_message]" />"}))
-					template.AddChild(xmlRootFromString({"<user_name color="[user]" />"}))
-					template.AddChild(xmlRootFromString({"<channel_traffic color="[traffic]" />"}))
-					template.AddChild(xmlRootFromString({"<system color="[system]" />"}))
-					template.AddChild(xmlRootFromString({"<time_stamp color="[time_stamp]" />"}))
-					return template
-
-				imprint(var/XML/Element/template)
-					version = text2num(template.Attribute("version"))
-					var/XML/Element/child
-					child = template.FirstChildElement("chat_font")
-					chat_font = child.Attribute("family")
-					if(version >= 2)
-						font_size = child.Attribute("size")
-
-					child = template.FirstChildElement("background")
-					background = child.Attribute("color")
-					child = template.FirstChildElement("user_message")
-					user_message = child.Attribute("color")
-					child = template.FirstChildElement("user_name")
-					user = child.Attribute("color")
-					child = template.FirstChildElement("channel_traffic")
-					traffic = child.Attribute("color")
-					child = template.FirstChildElement("system")
-					system = child.Attribute("color")
-					child = template.FirstChildElement("time_stamp")
-					time_stamp = child.Attribute("color")
-
-				apply(var/client/who, chan_name)
+				apply(var/client/who, chan_name) // Unrefactored
 					if(!who) return
 					var/style = style()
 					var/list/_channels
@@ -392,7 +361,7 @@ client
 							who.updateGrid(channel_name)
 						winset(who, "[channel_name].output", "background-color='[background]';style='[style]';")
 
-				style()
+				style() // Unrefactored
 					var/style = {"
 						.system{
 							color: [system];
@@ -435,31 +404,105 @@ client
 		nicknameSend()
 			user.msg(SYSTEM, ACTION_NICKNAME, preferences.nickname)
 
+
+
+//-- Preferences Saving & Loading ----------------------------------------------
+
+//-- File Access ---------------------------------
+client
+	proc
 		preferencesLoad()
+			// Load preferences from File
 			preferences = new(src)
-			var/file_path = "data/preferences/[ckey].xml"
-			if(!fexists(file_path))
-				preferences.skinLoad()
+			var filePath = "[CERES_PATH_PREFERENCES]/[ckey].json"
+			if(!fexists(filePath))
+				preferences.skin = new()
+				preferences.skin.apply(src)
 				nicknameSend()
 				return
-			var/F = file(file_path)
-			F = file2text(F)
-			var/XML/Element/E = xmlRootFromString(F)
-			preferences.imprint(E)
-			// Set Colors on User & Relay Nickname
+			var savedPreferences = file2text(filePath)
+			savedPreferences = json_decode(savedPreferences)
+			preferences.fromJSON(savedPreferences)
+			// Set Colors on User & artemis Nickname
 			user.colorName = preferences.colorName
 			user.colorText = preferences.colorText
 			nicknameSend()
 
 		preferencesSave()
-			// Set Colors on User & Relay Nickname
+			// Set Colors on User & artemis Nickname
 			user.colorName = preferences.colorName
 			user.colorText = preferences.colorText
 			nicknameSend()
 			// Save Preferences to File
-			var/XML/Element/E = preferences.to_xml()
-			var/file_path = "data/preferences/[ckey].xml"
-			if(fexists(file_path))
-				fdel(file_path)
-			var/F = file(file_path)
-			F << E.XML(TRUE)
+			var /list/objectData = preferences.toJSON()
+			var filePath = "[CERES_PATH_PREFERENCES]/[ckey].json"
+			if(fexists(filePath))
+				fdel(filePath)
+			text2file(json_encode(objectData), filePath)
+
+//-- JSON - encoding / decoding ------------------
+
+client/preferences
+	proc
+		fromJSON(list/objectData)
+			if(objectData["version"] >= CERES_PREFERENCES_VERSION)
+				return
+			CERES_LOAD_KEY(nickname)
+			CERES_LOAD_KEY(home_channel)
+			CERES_LOAD_KEY(time_stamps)
+			CERES_LOAD_KEY(traffic)
+			CERES_LOAD_KEY(show_colors)
+			CERES_LOAD_KEY(time_zone)
+			CERES_LOAD_KEY(daylight)
+			CERES_LOAD_KEY(colorName)
+			CERES_LOAD_KEY(colorText)
+			skin = new()
+			skin.fromJSON(objectData["skin"])
+			skin.apply(client)
+
+		toJSON()
+			var /list/objectData = new()
+			objectData["version"] = CERES_PREFERENCES_VERSION
+			CERES_SAVE_KEY(nickname)
+			CERES_SAVE_KEY(home_channel)
+			CERES_SAVE_KEY(time_stamps)
+			CERES_SAVE_KEY(traffic)
+			CERES_SAVE_KEY(show_colors)
+			CERES_SAVE_KEY(time_zone)
+			CERES_SAVE_KEY(daylight)
+			CERES_SAVE_KEY(colorName)
+			CERES_SAVE_KEY(colorText)
+			objectData["skin"] = skin.toJSON()
+			return objectData
+
+client/preferences/skin
+	proc
+		toJSON()
+			var /list/objectData = new()
+			objectData["version"] = CERES_PREFERENCES_VERSION
+			CERES_SAVE_KEY(chat_font)
+			CERES_SAVE_KEY(font_size)
+			CERES_SAVE_KEY(background)
+			CERES_SAVE_KEY(user_message)
+			CERES_SAVE_KEY(user)
+			CERES_SAVE_KEY(traffic)
+			CERES_SAVE_KEY(system)
+			CERES_SAVE_KEY(time_stamp)
+			return objectData
+
+		fromJSON(list/objectData)
+			if(objectData["version"] >= CERES_PREFERENCES_VERSION)
+				return
+			CERES_LOAD_KEY(chat_font)
+			CERES_LOAD_KEY(font_size)
+			CERES_LOAD_KEY(background)
+			CERES_LOAD_KEY(user_message)
+			CERES_LOAD_KEY(user)
+			CERES_LOAD_KEY(traffic)
+			CERES_LOAD_KEY(system)
+			CERES_LOAD_KEY(time_stamp)
+
+
+//-- Preprocessor Namespace Cleanup --------------------------------------------
+
+// Refactored. None needed at this time.

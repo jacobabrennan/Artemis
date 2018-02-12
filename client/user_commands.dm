@@ -10,7 +10,6 @@ client
 	verb
 		mainParse(what as text|null)
 			set name = "mainparse"
-			d(what)
 			if(!what) return
 			if(copytext(what,1,2) == "/")
 				var/word_split = findtextEx(what, " ")
@@ -66,19 +65,19 @@ client
 
 		msg(who as text, what as text)
 			set name = ".msg"
-			var/relay/user/target = relay.getUser(who)
+			var/artemis/user/target = artemis.getUser(who)
 			if(!target)
 				info({"The user "[who]" does not exist. You may be using a nickname instead of a network name."})
 				return
-			var/relay/msg/M = new(user.nameFull, target.nameFull, ACTION_MESSAGE, what)
-			relay.route(M)
+			var/artemis/msg/M = new(user.nameFull, target.nameFull, ACTION_MESSAGE, what)
+			artemis.route(M)
 			echo(M)
 
 		emote(what as text)
 			set name = ".emote"
 			if(!current_room) return
-			var/relay/msg/M = new(user.nameFull, current_room, ACTION_EMOTE, what)
-			relay.route(M)
+			var/artemis/msg/M = new(user.nameFull, current_room, ACTION_EMOTE, what)
+			artemis.route(M)
 			if(copytext(current_room, 1, 2) != "#")
 				echo(M)
 
@@ -88,20 +87,20 @@ client
 
 		whois(who as text)
 			set name = ".whois"
-			var/_full = relay.nicknamedUsers[lowertext(who)]
+			var/_full = artemis.nicknamedUsers[lowertext(who)]
 			if(!_full)
 				info({"There is no user "[who]""})
 				return
-			info({"The nickname "[who]" is registered to &lt;[relay.nicknamedUsers[lowertext(who)]]&gt;"})
+			info({"The nickname "[who]" is registered to &lt;[artemis.nicknamedUsers[lowertext(who)]]&gt;"})
 
 		chanlist()
 			set name = ".list"
 			var/chan_text = {"Visible Channels:"}
 			var/list/sorted_channels = new()
-			for(var/chan_name in relay.namedChannels)
-				sorted_channels += relay.namedChannels[chan_name]
-			sorted_channels = dd_sortedObjectList(sorted_channels)
-			for(var/relay/channel/C in sorted_channels)
+			for(var/chan_name in artemis.namedChannels)
+				sorted_channels += artemis.namedChannels[chan_name]
+			quickSort(sorted_channels)
+			for(var/artemis/channel/C in sorted_channels)
 				var/status = {""}
 				if(C.status & STATUS_HIDDEN) continue
 				if(C.status & STATUS_CLOSED) status += " (CLOSED)"
@@ -111,7 +110,7 @@ client
 
 		channel_status()
 			set name = ".status"
-			var/relay/channel/C = relay.getChannel(current_room)
+			var/artemis/channel/C = artemis.getChannel(current_room)
 			if(!C){ return}
 			info({"Channel Status: [C.name]
     Closed: [bool2text(C.status & STATUS_CLOSED)]
@@ -125,10 +124,10 @@ client
 
 		join(channel as text)
 			set name = ".join"
-			var/relay/channel/C = relay.getChannel(channel)
+			var/artemis/channel/C = artemis.getChannel(channel)
 			if(C) channel = C.name
 			user.msg("#[channel]", ACTION_JOIN)
-			if(!C) C = relay.getChannel(channel)
+			if(!C) C = artemis.getChannel(channel)
 			if(!C) return
 			//add_room(C.name, TRUE)
 			switch_chan("#[C.name]")
@@ -137,7 +136,7 @@ client
 			set name = ".leave"
 			if(!channel)
 				channel = current_room
-			var/relay/channel/C = relay.getChannel(channel)
+			var/artemis/channel/C = artemis.getChannel(channel)
 			if(C)
 				user.msg("#[C.name]", ACTION_LEAVE)
 				roomRemove("#[C.name]")
@@ -165,8 +164,8 @@ client
 		operate(action as text, username as text, value as num)
 			set name = ".operate"
 			var/channel = current_room
-			var/relay/channel/C = relay.getChannel(copytext(channel,2))
-			var/relay/user/U = relay.getUser(username)
+			var/artemis/channel/C = artemis.getChannel(copytext(channel,2))
+			var/artemis/user/U = artemis.getUser(username)
 			if(!C) return
 			var/status = C.status
 			var/p_level = C.permissionLevel(username)
@@ -179,25 +178,25 @@ client
 					user.msg(channel, ACTION_OPERATE, "user=[username]:[newp];")
 				if("mute")
 					if(p_level == PERMISSION_BLOCKED)
-						relay.msg(SYSTEM, "[user.nameFull][channel]", ACTION_DENIED, "You cannot mute [username], the user is already blocked.")
+						artemis.msg(SYSTEM, "[user.nameFull][channel]", ACTION_DENIED, "You cannot mute [username], the user is already blocked.")
 						return
 					var/newp = value? PERMISSION_MUTED : PERMISSION_NORMAL
 					user.msg(channel, ACTION_OPERATE, "user=[username]:[newp];")
 				if("voice")
 					if(p_level > PERMISSION_VOICED)
-						relay.msg(SYSTEM, "[user.nameFull][channel]", ACTION_DENIED, "You cannot voice [username], the user already has a higher permission level.")
+						artemis.msg(SYSTEM, "[user.nameFull][channel]", ACTION_DENIED, "You cannot voice [username], the user already has a higher permission level.")
 						return
 					var/newp = value? PERMISSION_VOICED : PERMISSION_NORMAL
 					user.msg(channel, ACTION_OPERATE, "user=[username]:[newp];")
 				if("operator")
 					if(p_level > PERMISSION_OPERATOR)
-						relay.msg(SYSTEM, "[user.nameFull][channel]", ACTION_DENIED, "You cannot make [username] an operator, the user already has a higher permission level.")
+						artemis.msg(SYSTEM, "[user.nameFull][channel]", ACTION_DENIED, "You cannot make [username] an operator, the user already has a higher permission level.")
 						return
 					var/newp = value? PERMISSION_OPERATOR : PERMISSION_NORMAL
 					user.msg(channel, ACTION_OPERATE, "user=[username]:[newp];")
 				if("owner")
 					if(p_level == PERMISSION_OWNER && username != user.nameFull)
-						relay.msg(SYSTEM, "[user.nameFull][channel]", ACTION_DENIED, "You cannot [username]'s permission level, the user is a channel owner.")
+						artemis.msg(SYSTEM, "[user.nameFull][channel]", ACTION_DENIED, "You cannot [username]'s permission level, the user is a channel owner.")
 						return
 					var/newp = value? PERMISSION_OWNER : PERMISSION_NORMAL
 					user.msg(channel, ACTION_OPERATE, "user=[username]:[newp];")
@@ -263,7 +262,7 @@ Usage: /nick newnick
 		join
 			aliases = "join"
 			execute(var/client/who, arg_text)
-				var/list/_args = relay.text2list(arg_text, " ")
+				var/list/_args = artemis.text2list(arg_text, " ")
 				if(!_args.len){ return}
 				var/chan = _args[1]
 				who.join(chan)
@@ -307,7 +306,7 @@ Usage: /status"}
 		leave
 			aliases = "leave"
 			execute(var/client/who, arg_text)
-				var/list/_args = relay.text2list(arg_text, " ")
+				var/list/_args = artemis.text2list(arg_text, " ")
 				if(!_args.len) return
 				var/chan = _args[1]
 				if(!chan) chan = who.current_room
@@ -321,11 +320,11 @@ Usage: /leave channel
 		private
 			aliases = list("pm","msg")
 			execute(var/client/who, arg_text)
-				var/list/_args = relay.text2list(arg_text, " ")
+				var/list/_args = artemis.text2list(arg_text, " ")
 				if(!_args.len) return
 				var/user_name = _args[1]
 				_args.Cut(1,2)
-				var/body = dd_list2text(_args, " ")
+				var/body = artemis.list2text(_args, " ")
 				who.msg(user_name, body)
 			help()
 				return {"
@@ -348,7 +347,7 @@ Usage: /topic newtopic
 		lock
 			aliases = list("lock","l")
 			execute(var/client/who, arg_text)
-				var/list/_args = relay.text2list(arg_text, " ")
+				var/list/_args = artemis.text2list(arg_text, " ")
 				var/_value = (_args.len >= 1)? who.text2bool(_args[1]) : TRUE
 				who.operate("locked", null, _value)
 			help()
@@ -360,7 +359,7 @@ Usage: /lock status
 		open
 			aliases = list("close")
 			execute(var/client/who, arg_text)
-				var/list/_args = relay.text2list(arg_text, " ")
+				var/list/_args = artemis.text2list(arg_text, " ")
 				var/_value = (_args.len >= 1)? who.text2bool(_args[1]) : TRUE
 				who.operate("closed", null, _value)
 			help()
@@ -372,7 +371,7 @@ Usage: /close status
 		hide
 			aliases = list("hide")
 			execute(var/client/who, arg_text)
-				var/list/_args = relay.text2list(arg_text, " ")
+				var/list/_args = artemis.text2list(arg_text, " ")
 				var/_value = (_args.len >= 1)? who.text2bool(_args[1]) : TRUE
 				who.operate("hidden", null, _value)
 			help()
@@ -384,7 +383,7 @@ Usage: /hide status
 		block
 			aliases = list("block")
 			execute(var/client/who, arg_text)
-				var/list/_args = relay.text2list(arg_text, " ")
+				var/list/_args = artemis.text2list(arg_text, " ")
 				if(!_args.len){ return}
 				var/user = _args[1]
 				var/_value = (_args.len > 1)? who.text2bool(_args[2]) : TRUE
@@ -399,7 +398,7 @@ Usage: /block user_name status
 		mute
 			aliases = list("mute")
 			execute(var/client/who, arg_text)
-				var/list/_args = relay.text2list(arg_text, " ")
+				var/list/_args = artemis.text2list(arg_text, " ")
 				if(!_args.len){ return}
 				var/user = _args[1]
 				var/_value = (_args.len > 1)? who.text2bool(_args[2]) : TRUE
@@ -414,7 +413,7 @@ Usage: /mute user_name status
 		voice
 			aliases = list("voice")
 			execute(var/client/who, arg_text)
-				var/list/_args = relay.text2list(arg_text, " ")
+				var/list/_args = artemis.text2list(arg_text, " ")
 				if(!_args.len){ return}
 				var/user = _args[1]
 				var/_value = (_args.len > 1)? who.text2bool(_args[2]) : TRUE
@@ -429,7 +428,7 @@ Usage: /voice user_name status
 		operator
 			aliases = list("operator")
 			execute(var/client/who, arg_text)
-				var/list/_args = relay.text2list(arg_text, " ")
+				var/list/_args = artemis.text2list(arg_text, " ")
 				if(!_args.len){ return}
 				var/user = _args[1]
 				var/_value = (_args.len > 1)? who.text2bool(_args[2]) : TRUE
@@ -444,7 +443,7 @@ Usage: /operator user_name status
 		owner
 			aliases = list("owner")
 			execute(var/client/who, arg_text)
-				var/list/_args = relay.text2list(arg_text, " ")
+				var/list/_args = artemis.text2list(arg_text, " ")
 				if(!_args.len){ return}
 				var/user = _args[1]
 				who.operate("owner", user, TRUE)
@@ -457,7 +456,7 @@ Usage: /operator user_name status
 		help
 			aliases = "help"
 			execute(var/client/who, arg_text)
-				var/list/_args = relay.text2list(arg_text, " ")
+				var/list/_args = artemis.text2list(arg_text, " ")
 				if(!_args.len) return
 				var/command = _args[1]
 				if(!command)

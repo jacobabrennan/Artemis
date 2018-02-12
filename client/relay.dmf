@@ -123,6 +123,7 @@ window "channel"
 		size = 640x480
 		anchor1 = none
 		anchor2 = none
+		background-color = none
 		saved-params = "pos;size;is-minimized;is-maximized"
 		title = "channel"
 		titlebar = false
@@ -160,6 +161,7 @@ window "channel"
 		small-icons = true
 		link-color = #0080ff
 		visited-color = #ff80c0
+		highlight-color = #000000
 	elem "output"
 		type = OUTPUT
 		pos = 0,25
@@ -1183,7 +1185,6 @@ window "window1"
 		size = 294x220
 		anchor1 = none
 		anchor2 = none
-		background-color = none
 		saved-params = "pos;size;is-minimized;is-maximized"
 	elem "output1"
 		type = OUTPUT

@@ -1,4 +1,4 @@
-relay/proc
+artemis/proc
 	// next two procs from Deadron.TextHandling, but without the annoyance of Deadron.Test
 		// And some minor changes
 	text2list(text, separator)

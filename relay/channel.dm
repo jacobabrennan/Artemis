@@ -1,11 +1,8 @@
-relay/channel
-	dd_SortValue() // For the /list command
-		return -(activeUsers.len)
 
 
-//------------------------------------------------------------------------------
+//-- Artemis artemis Channels ----------------------------------------------------
 
-relay/channel
+artemis/channel
 	parent_type = /datum
 	var
 		name
@@ -15,34 +12,37 @@ relay/channel
 		list/userPermissions = new // full_names associated with permission tiers (5 to 0)
 		status = 0 // see status bit flags in defines.dm
 
+	//-- User Management -----------------------------
 	proc
 		add(userName)
-			var/relay/user/joinUser = relay.getUser(userName)
+			var/artemis/user/joinUser = artemis.getUser(userName)
 			if(!joinUser) return
 			if(!activeUsers.len)
 				userPermissions[userName] = PERMISSION_OWNER
 			activeUsers.Add(userName)
 			joinUser.channelAdd(name)
-			relay.msg(SYSTEM, "[userName]#[name]", ACTION_TRAFFIC, "topic=[url_encode(topic)];")
+			artemis.msg(SYSTEM, "[userName]#[name]", ACTION_TRAFFIC, "topic=[url_encode(topic)];")
 			if(!findtextEx(userName, "."))
 				localUsers += userName
 			for(var/localUser in localUsers)
-				relay.msg(SYSTEM, "[localUser]#[name]", ACTION_TRAFFIC, "join=[userName];")
+				artemis.msg(SYSTEM, "[localUser]#[name]", ACTION_TRAFFIC, "join=[userName];")
 
 		remove(userName)
 			activeUsers -= userName
 			localUsers -= userName
-			var /relay/user/removeUser = relay.getUser(userName)
+			var /artemis/user/removeUser = artemis.getUser(userName)
 			if(removeUser)
 				removeUser.channelRemove(name)
 			if(!activeUsers.len)
 				spawn()
-					relay.namedChannels.Remove(name)
+					artemis.namedChannels.Remove(name)
 					del src
 			for(var/localUser in localUsers)
-				relay.msg(SYSTEM, "[localUser]#[name]", ACTION_TRAFFIC, "leave=[userName];")
+				artemis.msg(SYSTEM, "[localUser]#[name]", ACTION_TRAFFIC, "leave=[userName];")
+
+	//-- Message Handling ----------------------------
 	proc
-		receive(relay/msg/msg)
+		receive(artemis/msg/msg)
 			. = RESULT_SUCCESS // Important! Will not route to other servers without this value returned
 			var resultCode
 			switch(msg.action)
@@ -57,35 +57,35 @@ relay/channel
 			if(resultCode)
 				return resultCode
 
-		actionMessage(relay/msg/msg)
+		actionMessage(artemis/msg/msg)
 			if(!canSpeak(msg.sender))
 				spawn()
-					relay.msg(SYSTEM, "[msg.sender]#[name]", ACTION_DENIED, "You do not have permission to send messages to this channel.")
+					artemis.msg(SYSTEM, "[msg.sender]#[name]", ACTION_DENIED, "You do not have permission to send messages to this channel.")
 				return ACTION_DENIED
 			for(var/userName in localUsers)
-				relay.msg(msg.sender, "[userName]#[name]", msg.action, msg.body, msg.time)
+				artemis.msg(msg.sender, "[userName]#[name]", msg.action, msg.body, msg.time)
 
-		actionJoin(relay/msg/msg)
+		actionJoin(artemis/msg/msg)
 			if(msg.sender in activeUsers)
 				return RESULT_FAILURE
 			if(permissionLevel(msg.sender) <= PERMISSION_BLOCKED)
 				spawn()
-					relay.msg(SYSTEM, "[msg.sender]#[name]", ACTION_DENIED, "You do not have permission to join this channel.")
+					artemis.msg(SYSTEM, "[msg.sender]#[name]", ACTION_DENIED, "You do not have permission to join this channel.")
 				return ACTION_DENIED
 			add(msg.sender)
 			return RESULT_SUCCESS
 
-		actionLeave(relay/msg/msg)
+		actionLeave(artemis/msg/msg)
 			if(!(msg.sender in activeUsers))
 				return ACTION_MALFORMED
 			remove(msg.sender)
 			return RESULT_SUCCESS
 
-		actionOperate(relay/msg/msg)
+		actionOperate(artemis/msg/msg)
 			// Cancel out if the msg sender doesn't have appropriate permissions
 			if(!canOperate(msg.sender))
 				spawn()
-					relay.msg(SYSTEM, "[msg.sender]#[name]", ACTION_DENIED, "You do not have permission to operate this channel.")
+					artemis.msg(SYSTEM, "[msg.sender]#[name]", ACTION_DENIED, "You do not have permission to operate this channel.")
 				return ACTION_DENIED
 			//
 			var/list/params = params2list(lowertext(msg.body))
@@ -96,17 +96,17 @@ relay/channel
 						value &= (STATUS_CLOSED | STATUS_LOCKED | STATUS_HIDDEN)
 						status = value
 						for(var/user_name in activeUsers)
-							relay.msg(SYSTEM, "[user_name]#[name]", ACTION_TRAFFIC, "status=[status];")
+							artemis.msg(SYSTEM, "[user_name]#[name]", ACTION_TRAFFIC, "status=[status];")
 					if("topic")
 						topic = url_decode(params[index])
 						for(var/user_name in localUsers)
-							relay.msg(SYSTEM, "[user_name]#[name]", ACTION_TRAFFIC, "topic=[url_encode(topic)];")
+							artemis.msg(SYSTEM, "[user_name]#[name]", ACTION_TRAFFIC, "topic=[url_encode(topic)];")
 					if("user")
 						var usersList = params[index]
 						var newList = {""}
-						var /list/senderPath = relay.text2list(msg.sender, ".")
+						var /list/senderPath = artemis.text2list(msg.sender, ".")
 						var remoteHandle = (senderPath.len > 1)? senderPath[senderPath.len] : null
-						for(var/section in relay.text2list(usersList, " "))
+						for(var/section in artemis.text2list(usersList, " "))
 							var equalPos = findtextEx(section, ":")
 							if(!equalPos) continue
 							var userName = copytext(section, 1, equalPos)
@@ -114,11 +114,11 @@ relay/channel
 								if(senderPath == 1)
 									userName += ".[remoteHandle]"
 								else
-									var/list/userPath = relay.text2list(userName, ".")
+									var/list/userPath = artemis.text2list(userName, ".")
 									var/_proxy = userPath[userPath.len]
-									if(_proxy == relay.handle)
+									if(_proxy == artemis.handle)
 										userPath.Cut(userPath.len)
-										userName = relay.list2text(userPath, ".")
+										userName = artemis.list2text(userPath, ".")
 									else
 										userName += ".[remoteHandle]"
 							var newPermission = text2num(copytext(section, equalPos+1))
@@ -132,7 +132,7 @@ relay/channel
 							newList += "[userName]:[newPermission]"
 							newPermission = max(0, min(PERMISSION_OWNER, newPermission))
 							for(var/_name in localUsers)
-								relay.msg(SYSTEM, "[_name]#[name]", ACTION_TRAFFIC, "user=[userName]:[newPermission]")
+								artemis.msg(SYSTEM, "[_name]#[name]", ACTION_TRAFFIC, "user=[userName]:[newPermission]")
 							if((newPermission <= PERMISSION_BLOCKED) && (userName in activeUsers))
 								remove(userName)
 						params[index] = newList
@@ -141,9 +141,10 @@ relay/channel
 						// TODO: Blocking servers
 
 
-//------------------------------------------------------------------------------
+//-- Utilities -----------------------------------------------------------------
 
-relay/channel
+//-- Text Utilities ------------------------------
+artemis/channel
 	proc
 		chan2string()
 			if(!length(topic))
@@ -158,18 +159,9 @@ relay/channel
 				if(userName in userPermissions) continue
 				string += ";[userName]=[PERMISSION_ACTIVEFLAG]"
 			return string
-		/*status(){
-			var/statlist = {"!name=[name];status=[status];!topic=[url_encode(topic)]"}
-			for(var/user_name in activeUsers){
-				var/tier = permission_level(user_name)
-				statlist += ";[user_name]=[tier]"
-				}
-			}*/
 
-
-//------------------------------------------------------------------------------
-
-relay/channel
+//-- Permission Access Utilities -----------------
+artemis/channel
 	proc
 		permissionLevel(userName)
 			userName = lowertext(userName)

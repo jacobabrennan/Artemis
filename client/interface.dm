@@ -10,14 +10,14 @@ client
 			if(_markers)
 				for(var/obj/_marker in _markers)
 					del _marker
-			var/relay/channel/C = relay.getChannel(channel)
+			var/artemis/channel/C = artemis.getChannel(channel)
 			if(!C) return
 			_markers = list()
 			for(var/user_name in C.activeUsers)
 				var/client/whoMarker/_marker = new()
 				_marker.setup(src, user_name, C.permissionLevel(user_name))
 				_markers += _marker
-			_markers = dd_sortedObjectList(_markers)
+			quickSort(_markers)
 			who_markers[channel] = _markers
 			updateGrid(channel)
 
@@ -143,7 +143,7 @@ client
 					view_traffic = text2bool(view_traffic)
 					preferences.traffic = view_traffic
 			var/home_chan = winget(src, "pref_general.g_home", "text")
-			if(relay.alphanumeric(home_chan) != home_chan)
+			if(artemis.alphanumeric(home_chan) != home_chan)
 				winset(src, "pref_general.home_error", "is-visible='true'")
 				winset(src, "preferences.pref_tabs", "current-tab='pref_general'")
 				return
@@ -173,7 +173,7 @@ client
 				winset(src, "pref_naming.name_error", "is-visible='true';text='This nickname is invalid';")
 				winset(src, "preferences.pref_tabs", "current-tab='pref_naming'")
 				return
-			else if(lowertext(new_nick) in relay.nicknamedUsers && relay.nicknamedUsers[lowertext(new_nick)] != user.nameFull)
+			else if(lowertext(new_nick) in artemis.nicknamedUsers && artemis.nicknamedUsers[lowertext(new_nick)] != user.nameFull)
 				winset(src, "pref_naming.name_error", "is-visible='true';text='This nickname is taken';")
 				winset(src, "preferences.pref_tabs", "current-tab='pref_naming'")
 				return
@@ -323,7 +323,7 @@ client
 			preferences.skin.apply(src)
 			if(close)
 				winshow(src, "preferences", 0)
-			// Set Colors on User & Relay Nickname
+			// Set Colors on User & artemis Nickname
 			user.colorName = preferences.colorName
 			user.colorText = preferences.colorText
 			nicknameSend()
@@ -335,13 +335,12 @@ client
 		var
 			user
 			tier
-		dd_SortValue()
-			return -tier
+
 		proc
 
 			setup(var/client/who, user_name, _tier)
 				user = user_name
-				var/relay/user/U = relay.getUser(user_name)
+				var/artemis/user/U = artemis.getUser(user_name)
 				tier = _tier
 				var/using_nick = (who.preferences.view_nicks && U.nickname)
 				if(using_nick)
@@ -365,7 +364,7 @@ client
 				who.roomAdd(user, TRUE)
 
 			right_clicked(var/client/who)
-				var/relay/user/U = relay.getUser(user)
+				var/artemis/user/U = artemis.getUser(user)
 				if(!istype(U) || !U.nickname) return
 				who.whois(U.nickname)
 
@@ -382,12 +381,12 @@ client
 		submitCode()
 			set name = ".submit_code"
 			var/_code = winget(src, "code_editor.code_input", "text")
-			var/relay/msg/M = new(user.nameFull, current_room, ACTION_CODE, _code)
+			var/artemis/msg/M = new(user.nameFull, current_room, ACTION_CODE, _code)
 			winshow(src, "code_editor", FALSE)
 			winset(src, "code_editor.code_input", "text='';")
 			if(copytext(current_room, 1, 2) != "#")
 				echo(M)
-			relay.route(M)
+			artemis.route(M)
 
 
 //------------------------------------------------------------------------------
@@ -404,14 +403,14 @@ client
 	proc
 		roomAdd(channel_name, auto_show)
 			rooms.Add(channel_name)
-			var/relay/channel/C = relay.getChannel(channel_name)
-			var/relay/user/U
+			var/artemis/channel/C = artemis.getChannel(channel_name)
+			var/artemis/user/U
 			var/title
 			if(C)
 				title = C.name
 				winclone(src, CLONER_CHANNEL, channel_name)
 			else
-				U = relay.getUser(channel_name)
+				U = artemis.getUser(channel_name)
 				title = "PM:[U.nameFull]"
 				winclone(src, CLONER_PRIVATE, channel_name)
 			preferences.skin.apply(src, channel_name)
@@ -427,13 +426,13 @@ client
 		roomFlash(channel_name)
 			if(ckey(channel_name) == ckey(current_room))
 				return
-			var/relay/channel/C = relay.getChannel(channel_name)
-			var/relay/user/U
+			var/artemis/channel/C = artemis.getChannel(channel_name)
+			var/artemis/user/U
 			var/title
 			if(C)
 				title = C.name
 			else
-				U = relay.getUser(channel_name)
+				U = artemis.getUser(channel_name)
 				title = U.nameFull
 			if(copytext(channel_name,1,2) != "#"){ title = "PM:[title]"}
 			winset(src, channel_name, "title='*[title]';")
