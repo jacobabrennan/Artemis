@@ -1,3 +1,15 @@
+
+			/*filter(what){
+				var/list/lines = text2list(what,"\n")
+				var/_what = ""
+				for(var/line in lines){
+					_what += line
+					}
+				return _what
+				}
+			Also, flood guards*/
+
+
 client
 	North()
 		. = ..()
@@ -49,13 +61,8 @@ world/New()
 	world << {"Server "[artemis.handle]" opened on port [port]."}
 	world << {"Address:: [world.internet_address]:[world.port] \n\n"}
 	//
-	/*var/bot/logger/sally = new()
-	sally.channel = "artemis"
-	artemis.addUser("sally", sally)
-	sally.user = artemis.getUser("sally")
-	artemis.msg("sally", SYSTEM, ACTION_NICKNAME, "Sally")
-	//artemis.route(new /artemis/msg("sally", SYSTEM, ACTION_PREFERENCES, "nickname=Sally;color_name=#fff;color_text=#f00;"))
-	artemis.msg("sally", "#[sally.channel]", ACTION_JOIN)*/
+	var /artemis/bot/logger/sally = new("Salamander", "artemis")
+	sally.userPermissions["iainperegrine"] = 5
 
 client
 	Del()

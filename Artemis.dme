@@ -12,6 +12,8 @@
 // BEGIN_INCLUDE
 #include "issues.dm"
 #include "__secure\secure.dm"
+#include "bot\bot.dm"
+#include "bot\logger.dm"
 #include "client\client.dm"
 #include "client\interface.dm"
 #include "client\kuraudo_quicklinks.dm"

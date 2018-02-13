@@ -51,19 +51,19 @@ client
 
 	verb
 
-		tabchanged()
+		tabchanged() // Not Refactored
 			set name = ".tabchanged"
 			set hidden = TRUE
 			var/channel_name = winget(src, "channels", "current-tab")
 			switch_chan(channel_name)
 
-		about(toggle as num)
+		about(toggle as num) // Not Refactored
 			set name = ".about"
 			set hidden = TRUE
 			centerWindow("about")
 			winshow(src, "about", toggle)
 
-		showPreferences()
+		showPreferences() // Not Refactored
 			set name = ".preferences"
 			centerWindow("preferences")
 			winshow(src, "preferences")
@@ -133,7 +133,7 @@ client
 [ipsum]"}
 			src << output({"<span style="font-family:[preferences.skin.chat_font];font-size:[preferences.skin.font_size]pt;">[test_chat]</span>"}, "pref_color.color_test")
 
-		updateGeneral(var/which as text)
+		updateGeneral(var/which as text) // Not Refactored
 			set name = ".update_general"
 			switch(which)
 				if("current")
@@ -153,7 +153,7 @@ client
 			preferences.skin.font_size = (isnum(new_font_size) && new_font_size >= 0)? new_font_size : preferences.skin.font_size
 			return TRUE
 
-		updateNaming(var/which as text)
+		updateNaming(var/which as text) // Not Refactored
 			set name = ".update_naming"
 			switch(which)
 				if("usekey") // TODO
@@ -182,7 +182,7 @@ client
 			return TRUE
 
 		//------------------------------------------------
-		slideTime()
+		slideTime() // Not Refactored
 			set name = ".slide_time"
 			var/value = text2num(winget(src, "pref_time.ut_bar", "value"))
 			var/time = (value/100)*24
@@ -199,10 +199,10 @@ client
 			winset(src, "pref_time.ut_num"      , "text='UT[(day_hours >= 0)? "+[day_hours]" : day_hours]'")
 			winset(src, "pref_time.ut_zone"     , "text='[offset2zone(hours)]'")
 
-		offset2zone(utOffset as num)
+		offset2zone(utOffset as num) // Not Refactored
 			// Should be a proc, not verb. Got placed here while refactoring
 			if(!utOffset) utOffset = 0
-			utOffset += 13
+			utOffset += 13 // What is 13?
 			var /list/zones = list(
 				"Baker Island, Howland Island",
 				"Apia, Pago Pago",
@@ -233,7 +233,7 @@ client
 			return zones[utOffset]
 
 		//------------------------------------------------
-		changeColor(which as text)
+		changeColor(which as text) // Not Refactored
 			set name = ".change_color"
 			switch(which)
 				if("time")
@@ -310,7 +310,7 @@ client
 [ipsum]"}
 			src << output({"<span style="font-family:[preferences.skin.chat_font];font-size:[preferences.skin.font_size]pt;">[test_chat]</span>"}, "pref_color.color_test")
 
-		applyPrefChanges(close as num)
+		applyPrefChanges(close as num) // Not Refactored
 			set name = ".apply_pref_changes"
 			var success = updateGeneral(FALSE)
 			if(success)
@@ -332,7 +332,7 @@ client
 
 	//------------------------------------------------
 	show_popup_menus = FALSE
-	whoMarker
+	whoMarker // Not Refactored
 		parent_type = /obj
 		var
 			user
@@ -378,7 +378,7 @@ client
 			else
 				clicked(C)
 
-client
+client // Not Refactored
 	verb
 		submitCode()
 			set name = ".submit_code"

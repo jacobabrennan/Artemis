@@ -28,6 +28,15 @@ client
 		.=..()
 		initialize_commands()
 
+	//-- Input Sanitization --------------------------
+	var
+		regex/sanitizer = new("\n", "g")
+	proc
+		sanitizeChat(chat)
+			return sanitizer.Replace(chat, " floof ")
+			// Also Needed: flood guards
+
+
 	//------------------------------------------------
 	proc
 		info(what)
@@ -57,6 +66,7 @@ client
 	verb
 		chat(what as text)
 			set name = ".chat"
+			what = sanitizeChat(what)
 			if(current_room)
 				if(copytext(current_room, 1, 2) == "#")
 					user.msg(current_room, ACTION_MESSAGE, what)
@@ -65,6 +75,7 @@ client
 
 		msg(who as text, what as text)
 			set name = ".msg"
+			what = sanitizeChat(what)
 			var/artemis/user/target = artemis.getUser(who)
 			if(!target)
 				info({"The user "[who]" does not exist. You may be using a nickname instead of a network name."})
@@ -75,6 +86,7 @@ client
 
 		emote(what as text)
 			set name = ".emote"
+			what = sanitizeChat(what)
 			if(!current_room) return
 			var/artemis/msg/M = new(user.nameFull, current_room, ACTION_EMOTE, what)
 			artemis.route(M)

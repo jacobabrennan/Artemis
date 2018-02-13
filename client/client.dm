@@ -56,3 +56,60 @@ client/proc
 		if(istext(number)) return number
 		if(number) return "true"
 		else       return "false"
+
+
+//-- View Code Messages --------------------------------------------------------
+
+client/preferences/skin
+	proc
+		codeStyle()
+			return {"
+			<style type="text/css">
+				body{
+					background:[background];
+					}
+				pre.code{
+					color:[user_message];
+					background:[background];
+					margin:0.5em;
+					}
+				.comment{color:[traffic];}
+				.preproc{color:[system];}
+				.number{color:[user_message];}
+				.ident{color:[user_message];}
+				.keyword{color:[user];}
+				.string{color:[time_stamp];}
+			</style>
+			"}
+
+client
+	Topic(href, list/hrefList, hsrc)
+		.=..()
+		//
+		var action = hrefList["action"]
+		switch(action)
+		// Show Channel Stats
+			if("stats")
+				var/_channel = hrefList["channel"]
+				if(!_channel) return
+				if(!fexists("data/stats/[_channel].html")) return
+				src << run(file("data/stats/[_channel].html"))
+		// Show Code Messages
+			if("viewcode")
+				// Retrieve code message from \ref number
+				var refNum = hrefList["code"]
+				var /client/codeMessage/cm = locate(refNum)
+				// Cancel out if not located or expired
+				if(!cm)
+					info("This code message has expired.")
+					return
+				var/_id = text2num(hrefList["id"])
+				if(_id != cm.id)
+					info("This code message has expired.")
+					return
+				// Display Code in the browser
+				var/bodyText = "[cm.code]"
+				bodyText = highlighter.HighlightCode(bodyText)
+				var codeStyle = preferences.skin.codeStyle()
+				bodyText = "<html><title>Code Viewer</title><head>[codeStyle]</head><body>[bodyText]</body></html>"
+				src << browse(bodyText, "window=browser_code_viewer")

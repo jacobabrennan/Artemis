@@ -247,7 +247,7 @@ artemis
 				DIAG("Too Long: [remoteHandle] > [MAX_HANDLE_LENGTH]")
 				return // malformed
 			// Check for Artemis handle collisions (instance with that handle already connected)
-			if(getServer(remoteHandle))
+			if(remoteHandle == handle || getServer(remoteHandle))
 				spawn()
 					export(new /artemis/msg(SYSTEM, "[SYSTEM].[remoteHandle]", ACTION_COLLISION, remoteHandle), remoteAddress)
 				DIAG("Collision")
@@ -384,6 +384,8 @@ artemis
 			var newNickname = body ///list/params = params2list(body)
 			if(length(newNickname) > 20)
 				newNickname = copytext(newNickname, 1, 21)
+			var/global/regex/noWhiteSpace = regex(@"\n|\s", "g")
+			newNickname = noWhiteSpace.Replace(newNickname, "")
 			// Clear the nickname if: No nick supplied; nick starts with " "; there's a collision
 			var clear = FALSE
 			if(!newNickname) clear = TRUE
@@ -502,7 +504,8 @@ artemis
 				if(drop)
 					var remoteHandle = addressedHandles[address]
 					var /artemis/server/remoteServer = getServer(remoteHandle)
-					remoteServer.drop()
+					if(remoteServer)
+						remoteServer.drop()
 
 		import(string, remoteAddress)
 			//world << {"<span style="color:#080;">Importing:: [url_decode(string)]</span>"}

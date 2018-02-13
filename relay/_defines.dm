@@ -14,7 +14,7 @@
 
 
 
-//-- artemis & Metrics - NONCONFIGURABLE -----------------------------------------
+//-- artemis & Metrics - NONCONFIGURABLE ---------------------------------------
 #define SYSTEM "system"
 #define PROTOCOL_VERSION "0.3"
 #define MAX_HANDLE_LENGTH 12

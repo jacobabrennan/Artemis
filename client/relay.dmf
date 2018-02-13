@@ -155,13 +155,14 @@ window "channel"
 		font-size = 12
 		border = sunken
 		saved-params = ""
-		cells = 1x1
+		cells = 1x0
 		current-cell = 1,1
 		show-lines = none
 		small-icons = true
 		link-color = #0080ff
 		visited-color = #ff80c0
 		highlight-color = #000000
+		is-list = true
 	elem "output"
 		type = OUTPUT
 		pos = 0,25
