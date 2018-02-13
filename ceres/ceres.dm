@@ -1,9 +1,4 @@
 
-/*
-mob/Logout()
-		drop the user, and stuff
-*/
-
 
 //------------------------------------------------------------------------------
 
@@ -11,7 +6,22 @@ mob/Logout()
 #define CLONER_PRIVATE "private"
 #define CHAR_LIMIT 400
 
-client
+world/mob = /ceres
+
+ceres
+	Login()
+		. = ..()
+		client.show_popup_menus = FALSE
+	Logout()
+		. = ..()
+		del src
+	Del()
+		if(user)
+			user.drop()
+		. = ..()
+
+ceres
+	parent_type = /mob
 	var
 		artemis/user/user
 		utOffset = -5
@@ -23,7 +33,7 @@ client
 		user = artemis.addUser(ckey, src)
 		if(!user)
 			alert(src, {"There has been a registration error with your username "[ckey]"."})
-			//winset(src, null, "command=.quit")
+			winset(src, null, "command=.quit")
 			del src
 		preferencesLoad()
 		if(preferences.home_channel)
@@ -35,7 +45,7 @@ client
 			artemis.removeUser(user)
 		. = ..()
 
-client/proc
+ceres/proc
 
 	time2stamp(_stamp, _offset)
 		_stamp += (_offset-utOffset)*36000
@@ -60,7 +70,7 @@ client/proc
 
 //-- View Code Messages --------------------------------------------------------
 
-client/preferences/skin
+ceres/preferences/skin
 	proc
 		codeStyle()
 			return {"
@@ -82,7 +92,7 @@ client/preferences/skin
 			</style>
 			"}
 
-client
+ceres
 	Topic(href, list/hrefList, hsrc)
 		.=..()
 		//
@@ -98,7 +108,7 @@ client
 			if("viewcode")
 				// Retrieve code message from \ref number
 				var refNum = hrefList["code"]
-				var /client/codeMessage/cm = locate(refNum)
+				var /ceres/codeMessage/cm = locate(refNum)
 				// Cancel out if not located or expired
 				if(!cm)
 					info("This code message has expired.")

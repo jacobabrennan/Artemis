@@ -2,7 +2,7 @@
 
 //------------------------------------------------------------------------------
 
-client
+ceres
 	var
 		list/commands
 		current_room
@@ -33,7 +33,7 @@ client
 		regex/sanitizer = new("\n", "g")
 	proc
 		sanitizeChat(chat)
-			return sanitizer.Replace(chat, " floof ")
+			return sanitizer.Replace(chat, " ")
 			// Also Needed: flood guards
 
 
@@ -44,8 +44,8 @@ client
 
 		initialize_commands()
 			commands = new()
-			for(var/c_type in typesof(/client/command))
-				var/client/command/C = new c_type()
+			for(var/c_type in typesof(/ceres/command))
+				var/ceres/command/C = new c_type()
 				if(!C.aliases)
 					del C
 					continue
@@ -56,7 +56,7 @@ client
 						commands[_alias] = C
 
 		user_command(var/client/who, which, arg_text)
-			var/client/command/command = commands[which]
+			var/ceres/command/command = commands[which]
 			if(!command)
 				info("Unrecognized or invalid command: [which]")
 				return
@@ -241,7 +241,7 @@ client
 
 		whois
 			aliases = "whois"
-			execute(var/client/who, arg_text)
+			execute(var/ceres/who, arg_text)
 				who.whois(arg_text)
 			help()
 				return {"
@@ -251,7 +251,7 @@ Usage: /whois nickname
 
 		list
 			aliases = "list"
-			execute(var/client/who, arg_text)
+			execute(var/ceres/who, arg_text)
 				who.chanlist()
 			help()
 				return {"
@@ -261,7 +261,7 @@ Usage: /list
 
 		nick
 			aliases = "nick"
-			execute(var/client/who, arg_text)
+			execute(var/ceres/who, arg_text)
 				if(!arg_text){ return}
 				who.change_nick(arg_text)
 			help()
@@ -273,7 +273,7 @@ Usage: /nick newnick
 
 		join
 			aliases = "join"
-			execute(var/client/who, arg_text)
+			execute(var/ceres/who, arg_text)
 				var/list/_args = artemis.text2list(arg_text, " ")
 				if(!_args.len){ return}
 				var/chan = _args[1]
@@ -287,7 +287,7 @@ Usage: /join channel
 
 		emote
 			aliases = list("me","emote")
-			execute(var/client/who, arg_text)
+			execute(var/ceres/who, arg_text)
 				who.emote(arg_text)
 			help()
 				return {"
@@ -298,7 +298,7 @@ Usage: /me action
 
 		code
 			aliases = "code"
-			execute(var/client/who, arg_text)
+			execute(var/ceres/who, arg_text)
 				who.open_code_editor()
 			help()
 				return {"
@@ -308,7 +308,7 @@ Usage: /code
 
 		channel_status
 			aliases = list("status")
-			execute(var/client/who, arg_text)
+			execute(var/ceres/who, arg_text)
 				who.channel_status()
 			help()
 				return {"
@@ -317,7 +317,7 @@ Usage: /status"}
 
 		leave
 			aliases = "leave"
-			execute(var/client/who, arg_text)
+			execute(var/ceres/who, arg_text)
 				var/list/_args = artemis.text2list(arg_text, " ")
 				if(!_args.len) return
 				var/chan = _args[1]
@@ -331,7 +331,7 @@ Usage: /leave channel
 
 		private
 			aliases = list("pm","msg")
-			execute(var/client/who, arg_text)
+			execute(var/ceres/who, arg_text)
 				var/list/_args = artemis.text2list(arg_text, " ")
 				if(!_args.len) return
 				var/user_name = _args[1]
@@ -347,7 +347,7 @@ Usage: /msg netname message
 
 		topic
 			aliases = "topic"
-			execute(var/client/who, arg_text)
+			execute(var/ceres/who, arg_text)
 				if(!arg_text){ return}
 				who.operate("topic", null, arg_text)
 			help()
@@ -358,7 +358,7 @@ Usage: /topic newtopic
 
 		lock
 			aliases = list("lock","l")
-			execute(var/client/who, arg_text)
+			execute(var/ceres/who, arg_text)
 				var/list/_args = artemis.text2list(arg_text, " ")
 				var/_value = (_args.len >= 1)? who.text2bool(_args[1]) : TRUE
 				who.operate("locked", null, _value)
@@ -370,7 +370,7 @@ Usage: /lock status
 
 		open
 			aliases = list("close")
-			execute(var/client/who, arg_text)
+			execute(var/ceres/who, arg_text)
 				var/list/_args = artemis.text2list(arg_text, " ")
 				var/_value = (_args.len >= 1)? who.text2bool(_args[1]) : TRUE
 				who.operate("closed", null, _value)
@@ -382,7 +382,7 @@ Usage: /close status
 
 		hide
 			aliases = list("hide")
-			execute(var/client/who, arg_text)
+			execute(var/ceres/who, arg_text)
 				var/list/_args = artemis.text2list(arg_text, " ")
 				var/_value = (_args.len >= 1)? who.text2bool(_args[1]) : TRUE
 				who.operate("hidden", null, _value)
@@ -394,7 +394,7 @@ Usage: /hide status
 
 		block
 			aliases = list("block")
-			execute(var/client/who, arg_text)
+			execute(var/ceres/who, arg_text)
 				var/list/_args = artemis.text2list(arg_text, " ")
 				if(!_args.len){ return}
 				var/user = _args[1]
@@ -409,7 +409,7 @@ Usage: /block user_name status
 
 		mute
 			aliases = list("mute")
-			execute(var/client/who, arg_text)
+			execute(var/ceres/who, arg_text)
 				var/list/_args = artemis.text2list(arg_text, " ")
 				if(!_args.len){ return}
 				var/user = _args[1]
@@ -424,7 +424,7 @@ Usage: /mute user_name status
 
 		voice
 			aliases = list("voice")
-			execute(var/client/who, arg_text)
+			execute(var/ceres/who, arg_text)
 				var/list/_args = artemis.text2list(arg_text, " ")
 				if(!_args.len){ return}
 				var/user = _args[1]
@@ -439,7 +439,7 @@ Usage: /voice user_name status
 
 		operator
 			aliases = list("operator")
-			execute(var/client/who, arg_text)
+			execute(var/ceres/who, arg_text)
 				var/list/_args = artemis.text2list(arg_text, " ")
 				if(!_args.len){ return}
 				var/user = _args[1]
@@ -454,7 +454,7 @@ Usage: /operator user_name status
 
 		owner
 			aliases = list("owner")
-			execute(var/client/who, arg_text)
+			execute(var/ceres/who, arg_text)
 				var/list/_args = artemis.text2list(arg_text, " ")
 				if(!_args.len){ return}
 				var/user = _args[1]
@@ -467,7 +467,7 @@ Usage: /operator user_name status
 
 		help
 			aliases = "help"
-			execute(var/client/who, arg_text)
+			execute(var/ceres/who, arg_text)
 				var/list/_args = artemis.text2list(arg_text, " ")
 				if(!_args.len) return
 				var/command = _args[1]
@@ -480,7 +480,7 @@ Usage: /operator user_name status
 					you can access this command by entering "/help". Some commands take parameters which can be added after the command, \
 					such as "/help join", which will display info explaining how to use the "join" command. The following commands are available:[command_text]"})
 				else
-					var/client/command/C = who.commands[lowertext(command)]
+					var/ceres/command/C = who.commands[lowertext(command)]
 					if(!C)
 						who.info("The specified command does not exist: [command]")
 					who.info(C.help())

@@ -2,9 +2,9 @@
 
 //------------------------------------------------------------------------------
 
-client
+ceres
 	var/global
-		client/highlighter/highlighter
+		ceres/highlighter/highlighter
 	New()
 		.=..()
 		if(!highlighter) highlighter = new()
@@ -54,7 +54,7 @@ client
 	 */
 
 
-client/highlighter
+ceres/highlighter
 	parent_type = /datum
 
 	var/list/DMKeywordList=list(\

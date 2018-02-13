@@ -11,7 +11,7 @@
 
 
 //-- QuickSort - Attributed to AbyssDragon -------
-client
+ceres
 	proc
 		quickSort(list/unsortedList, low = 1, high = -1)
 			if(high == -1)
@@ -34,9 +34,9 @@ client
 			return unsortedList
 
 
-		Compare(client/whoMarker/A, artemis/channel/B)
+		Compare(ceres/whoMarker/A, artemis/channel/B)
 			if(istype(A))
-				var client/whoMarker/markB = B
+				var /ceres/whoMarker/markB = B
 				return (A.tier - markB.tier)
 			if(istype(B))
 				var artemis/channel/chanA = A
@@ -49,7 +49,7 @@ client
 //-- Message Handling ----------------------------------------------------------
 
 //-- Utility Class -------------------------------
-client
+ceres
 	var
 		list/codeMessages = new()
 	codeMessage
@@ -66,7 +66,7 @@ client
 				del src
 
 //------------------------------------------------
-client
+ceres
 	proc
 		echo(artemis/msg/msg) // Unrefactored
 			var/tab_channel
@@ -91,7 +91,7 @@ client
 					roomFlash(tab_channel)
 				if(ACTION_CODE)
 					if(!msg.body) return
-					var /client/codeMessage/cm = new(msg)
+					var /ceres/codeMessage/cm = new(msg)
 					codeMessages += cm
 					formatted_text = formatUsercode(user, cm, msg.time)
 					roomFlash(tab_channel)
@@ -129,7 +129,7 @@ client
 					roomFlash(tab_channel)
 				if(ACTION_CODE)
 					if(!msg.body) return
-					var /client/codeMessage/cm = new(msg)
+					var /ceres/codeMessage/cm = new(msg)
 					codeMessages += cm
 					formatted_text = formatUsercode(sender, cm, msg.time)
 					roomFlash(tab_channel)
@@ -207,7 +207,7 @@ client
 
 //-- Output Formatting ---------------------------------------------------------
 
-client
+ceres
 	proc
 		/*format_channel(body, time) // Unrefactored
 			body = html_encode(body)
@@ -268,7 +268,7 @@ client
 			var/full_message = {"[time_stamp][sender_span][separator][message_span]"}
 			return full_message
 
-		formatUsercode(artemis/user/sender, client/codeMessage/cm, time) // Unrefactored
+		formatUsercode(artemis/user/sender, ceres/codeMessage/cm, time) // Unrefactored
 			var/using_nick = (sender.nickname && preferences.view_nicks)
 			var/sender_span
 			if(using_nick) sender_span = html_encode(sender.nickname)
@@ -298,15 +298,15 @@ artemis/user
 		colorName
 		colorText
 
-client
+ceres
 	var
-		client/preferences/preferences
+		ceres/preferences/preferences
 
 	preferences
 		parent_type = /datum
 		var
 			version = 1
-			client/preferences/skin/skin
+			ceres/preferences/skin/skin
 			// Nonconfigurable
 			nickname
 			home_channel
@@ -319,12 +319,12 @@ client
 			time_zone = -5
 			daylight = FALSE
 			// Internals
-			client/client
+			ceres/ceres
 
-		New(var/client/_client)
+		New(var/ceres/_client)
 			.=..()
-			client = _client
-			nickname = client.key
+			ceres = _client
+			nickname = ceres.client.key
 			skin = new()
 
 		//------------------------------------------------
@@ -345,7 +345,7 @@ client
 				time_stamp = "#999980" // class="time_stamp"
 
 			proc
-				apply(var/client/who, chan_name) // Unrefactored
+				apply(var/ceres/who, chan_name) // Unrefactored
 					if(!who) return
 					var/style = style()
 					var/list/_channels
@@ -400,7 +400,7 @@ client
 					return style
 
 //------------------------------------------------
-client
+ceres
 	proc
 		nicknameSend()
 			user.msg(SYSTEM, ACTION_NICKNAME, preferences.nickname)
@@ -410,7 +410,7 @@ client
 //-- Preferences Saving & Loading ----------------------------------------------
 
 //-- File Access ---------------------------------
-client
+ceres
 	proc
 		preferencesLoad()
 			// Load preferences from File
@@ -442,7 +442,7 @@ client
 
 //-- JSON - encoding / decoding ------------------
 
-client/preferences
+ceres/preferences
 	proc
 		fromJSON(list/objectData)
 			if(objectData["version"] > CERES_PREFERENCES_VERSION)
@@ -457,7 +457,7 @@ client/preferences
 			CERES_LOAD_KEY(colorName)
 			CERES_LOAD_KEY(colorText)
 			skin.fromJSON(objectData["skin"])
-			skin.apply(client)
+			skin.apply(ceres)
 
 		toJSON()
 			var /list/objectData = new()
@@ -474,7 +474,7 @@ client/preferences
 			objectData["skin"] = skin.toJSON()
 			return objectData
 
-client/preferences/skin
+ceres/preferences/skin
 	proc
 		toJSON()
 			var /list/objectData = new()

@@ -14,7 +14,7 @@ artemis/channel
 
 	//-- User Management -----------------------------
 	proc
-		add(userName)
+		addUser(userName)
 			var/artemis/user/joinUser = artemis.getUser(userName)
 			if(!joinUser) return
 			if(!activeUsers.len)
@@ -27,7 +27,7 @@ artemis/channel
 			for(var/localUser in localUsers)
 				artemis.msg(SYSTEM, "[localUser]#[name]", ACTION_TRAFFIC, "join=[userName];")
 
-		remove(userName)
+		removeUser(userName)
 			activeUsers -= userName
 			localUsers -= userName
 			var /artemis/user/removeUser = artemis.getUser(userName)
@@ -72,13 +72,13 @@ artemis/channel
 				spawn()
 					artemis.msg(SYSTEM, "[msg.sender]#[name]", ACTION_DENIED, "You do not have permission to join this channel.")
 				return ACTION_DENIED
-			add(msg.sender)
+			addUser(msg.sender)
 			return RESULT_SUCCESS
 
 		actionLeave(artemis/msg/msg)
 			if(!(msg.sender in activeUsers))
 				return ACTION_MALFORMED
-			remove(msg.sender)
+			removeUser(msg.sender)
 			return RESULT_SUCCESS
 
 		actionOperate(artemis/msg/msg)
@@ -134,7 +134,7 @@ artemis/channel
 							for(var/_name in localUsers)
 								artemis.msg(SYSTEM, "[_name]#[name]", ACTION_TRAFFIC, "user=[userName]:[newPermission]")
 							if((newPermission <= PERMISSION_BLOCKED) && (userName in activeUsers))
-								remove(userName)
+								removeUser(userName)
 						params[index] = newList
 						msg.body = list2params(params)
 					//if("server")

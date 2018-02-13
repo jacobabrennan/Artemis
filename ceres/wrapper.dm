@@ -1,15 +1,3 @@
-
-			/*filter(what){
-				var/list/lines = text2list(what,"\n")
-				var/_what = ""
-				for(var/line in lines){
-					_what += line
-					}
-				return _what
-				}
-			Also, flood guards*/
-
-
 client
 	North()
 		. = ..()
@@ -23,20 +11,10 @@ client
 	South()
 		. = ..()
 		artemis.disconnect("artemis")
-/*	East()
-		. = ..()
-		artemis.closed = TRUE
-	West()
-		. = ..()
-		artemis.closed = FALSE
-
-artemis
-	var
-		closed = FALSE
-	import()
-		if(closed) return
-		. = ..()
-*/
+	Center()
+		if(key != "IainPeregrine") return
+		world << "\n\n"
+		world.Reboot()
 
 world
 	name = "Artemis"
@@ -63,16 +41,6 @@ world/New()
 	//
 	var /artemis/bot/logger/sally = new("Salamander", "artemis")
 	sally.userPermissions["iainperegrine"] = 5
-
-client
-	Del()
-		if(user)
-			user.drop()
-		. = ..()
-	Center()
-		if(key != "IainPeregrine") return
-		world << "\n\n"
-		world.Reboot()
 
 artemis
 	parent_type = /obj

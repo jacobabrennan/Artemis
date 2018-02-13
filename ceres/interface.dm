@@ -2,7 +2,7 @@
 
 //------------------------------------------------------------------------------
 
-client
+ceres
 	proc
 
 		updateWhogrid(channel)
@@ -14,7 +14,7 @@ client
 			if(!C) return
 			_markers = list()
 			for(var/user_name in C.activeUsers)
-				var/client/whoMarker/_marker = new()
+				var /ceres/whoMarker/_marker = new()
 				_marker.setup(src, user_name, C.permissionLevel(user_name))
 				_markers += _marker
 			quickSort(_markers)
@@ -26,7 +26,7 @@ client
 			if(!_markers) _markers = list()
 			winset(src, "[channel_name].who", "cells=[1],[_markers.len]")
 			for(var/I = 1 to _markers.len)
-				var/client/whoMarker/M = _markers[I]
+				var/ceres/whoMarker/M = _markers[I]
 				src << output(M,"[channel_name].who:[1],[I]")
 
 	proc
@@ -67,7 +67,7 @@ client
 			set name = ".preferences"
 			centerWindow("preferences")
 			winshow(src, "preferences")
-			var/client/preferences/skin/S = preferences.skin
+			var/ceres/preferences/skin/S = preferences.skin
 			/* Naming preferences */
 			winset(src, "pref_naming.name_netname"  , "text='Network Name: [user.nameFull]'")
 			winset(src, "pref_naming.name_error"    , "is-visible='false'")
@@ -331,7 +331,6 @@ client
 			preferencesSave()
 
 	//------------------------------------------------
-	show_popup_menus = FALSE
 	whoMarker // Not Refactored
 		parent_type = /obj
 		var
@@ -340,7 +339,7 @@ client
 
 		proc
 
-			setup(var/client/who, user_name, _tier)
+			setup(var/ceres/who, user_name, _tier)
 				user = user_name
 				var/artemis/user/U = artemis.getUser(user_name)
 				tier = _tier
@@ -361,11 +360,11 @@ client
 					if(PERMISSION_BLOCKED ) return "!"
 					else return "*"
 
-			clicked(var/client/who)
+			clicked(var/ceres/who)
 				if(ckey(who.user.nameFull) == ckey(user)) return
 				who.roomAdd(user, TRUE)
 
-			right_clicked(var/client/who)
+			right_clicked(var/ceres/who)
 				var/artemis/user/U = artemis.getUser(user)
 				if(!istype(U) || !U.nickname) return
 				who.whois(U.nickname)
@@ -378,7 +377,7 @@ client
 			else
 				clicked(C)
 
-client // Not Refactored
+ceres // Not Refactored
 	verb
 		submitCode()
 			set name = ".submit_code"
@@ -393,7 +392,7 @@ client // Not Refactored
 
 //------------------------------------------------------------------------------
 
-client
+ceres
 	var
 		list/who_markers = new()
 		list/rooms = new()

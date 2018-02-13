@@ -2,10 +2,10 @@
 
 //------------------------------------------------------------------------------
 
-client
+ceres
 	var/global
-		client/quickLinker/linker = new()
-client/quickLinker
+		ceres/quickLinker/linker = new()
+ceres/quickLinker
 	parent_type = /datum
 	proc
 		linkParse(txt)
@@ -59,7 +59,7 @@ client/quickLinker
 				// returns a parsed version of str, with consideration to the quicklinks list
 */
 
-client/quickLinker
+ceres/quickLinker
 	var
 		list/quicklinks
 
@@ -70,16 +70,16 @@ client/quickLinker
 
 		init_all()
 			quicklinks = new
-			for(var/quicklink in typesof(/client/quickLinker/quicklink)-/client/quickLinker/quicklink)
+			for(var/quicklink in typesof(/ceres/quickLinker/quicklink)-/ceres/quickLinker/quicklink)
 				quicklinks += new quicklink
 
 		parse(str)
 			var/start = 1
 			for()
 				var
-					client/quickLinker/quicklink/min_link
+					ceres/quickLinker/quicklink/min_link
 					min_pos = 0
-				for(var/client/quickLinker/quicklink/Q in quicklinks)
+				for(var/ceres/quickLinker/quicklink/Q in quicklinks)
 					var/pos = findtextEx(str, Q.name, start)
 					if(pos && (!min_pos || pos < min_pos))
 						min_pos = pos
@@ -139,7 +139,7 @@ client/quickLinker
 	as "help" or "cp" and then if neither match, only allow numbers as a query string.
 */
 
-client/quickLinker/quicklink
+ceres/quickLinker/quicklink
 	parent_type = /datum
 	var
 		name
@@ -197,7 +197,7 @@ client/quickLinker/quicklink
 	the various /quicklink variables.
 **************************************************************/
 
-client/quickLinker/quicklink
+ceres/quickLinker/quicklink
 	byond_dev_forum		// Example: id:3306
 		name = "id:"
 		url = "http://byond.com/developer/forum?id="
