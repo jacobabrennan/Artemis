@@ -15,12 +15,12 @@ artemis/bot/logger
 		name = newName
 		homeChannel = newChannel
 		user = artemis.addUser(newName, src)
-		user.msg(SYSTEM, ACTION_NICKNAME, newName)
-		user.msg("#[homeChannel]", ACTION_JOIN)
+		user.msg(artemis.SYSTEM, ARTEMIS_ACTION_NICKNAME, null, newName)
+		user.msg(null, ARTEMIS_ACTION_JOIN, homeChannel)
 
 	var
-		pathLog = "data/logs"
-		pathStats = "data/stats"
+		pathLog = ARTEMIS_PATH_DATA+"/logs"
+		pathStats = ARTEMIS_PATH_DATA+"/stats"
 
 
 //-- Message Handling ----------------------------------------------------------
@@ -34,28 +34,24 @@ artemis/bot/logger
 		. = ..()
 		sleep(1)
 		// Handle messages sent directly from a user (not through a channel)
-		if(msg.target == user.nameFull)
+		if(!msg.channel)
 			var success = parsePrivateMessage(msg)
 			if(!success)
-				user.msg(msg.sender, ACTION_MESSAGE, "No thanks ^-^")
+				user.msg(msg.sender, ARTEMIS_ACTION_MESSAGE, null, "No thanks ^-^")
 			return
-		// Determine Channel Name. Cancel out if not home channel.
-		var hashPos = findtextEx(msg.target, "#")
-		if(!hashPos) return
-		if(hashPos)
-			var targetChannel = copytext(msg.target, hashPos+1)
-			if(targetChannel != homeChannel) return
+		// Cancel out if not home channel.
+		if(msg.channel != homeChannel) return
 		// Handle Traffic: Set user permissions
-		if(msg.action == ACTION_TRAFFIC)
+		if(msg.action == ARTEMIS_ACTION_TRAFFIC)
 			var /list/actions = params2list(msg.body)
 			// Only pay attention to joining traffic
 			if(!("join" in actions)) return
 			var userName = actions["join"]
 			if(userName in userPermissions)
 				var permissionLevel = userPermissions[userName]
-				user.msg("#[homeChannel]", ACTION_OPERATE, "user=[userName]:[permissionLevel]")
+				user.msg(null, ARTEMIS_ACTION_OPERATE, homeChannel, "user=[userName]:[permissionLevel]")
 		// Log messages sent to the channel
-		else if(msg.action == ACTION_MESSAGE)
+		else if(msg.action == ARTEMIS_ACTION_MESSAGE)
 			if(!msg.body) return
 			var /list/objectData = list()
 			var nudged_stamp = msg.time + offset
@@ -64,14 +60,14 @@ artemis/bot/logger
 			objectData["time"]   = nudged_stamp
 			objectData["body"]   = msg.body
 			var date = time2text(world.realtime, "YY-MM-DD")
-			var F = file({"[pathLog]/[date] [homeChannel].txt"})
+			var F = file({"[pathLog]/[homeChannel] [date].txt"})
 			F << "[json_encode(objectData)],"
 
 	//-- Commands from Owners and Operators ----------
 	proc/parsePrivateMessage(artemis/msg/msg)
 		// Ensure user can opperate channel
 		var /artemis/channel/logChannel = artemis.getChannel(homeChannel)
-		if(!logChannel.canOperate(msg.sender)) return
+		if(!logChannel.canOperate(msg.sender) && FALSE) return TRUE
 		// Parse message body for command
 		var /list/argList = artemis.text2list(msg.body, " ")
 		if(!argList.len){ return}
@@ -85,23 +81,25 @@ artemis/bot/logger
 				var/artemis/user/U = artemis.getUser(msg.sender)
 				if(!U || !istype(U.intelligence, /client)) return
 				var date = time2text(world.realtime, "YY-MM-DD")
-				U.intelligence << ftp(file({"[pathLog]/[date] [homeChannel].txt"}))
+				U.intelligence << ftp(file({"[pathLog]/[homeChannel] [date].txt"}))
 		// Update and Display Stats
 			if("update")
+				DIAG("ASDFASDF")
 				// Ensure second word is "stats"
 				if(argList.len < 2 || lowertext(argList[2]) != "stats") return
+				DIAG("ASDF")
 				spawn() updateStats()
 		// Speak as directed
 			if("echo")
 				var /list/words = argList.Copy(2)
-				user.msg("#[homeChannel]", ACTION_MESSAGE, "[artemis.list2text(words, " ")]")
+				user.msg(null, ARTEMIS_ACTION_MESSAGE, homeChannel, "[artemis.list2text(words, " ")]")
 		// Emote as directed
 			if("emote")
 				var /list/rest = argList.Copy(2)
-				user.msg("#[homeChannel]", ACTION_EMOTE, "[artemis.list2text(rest, " ")]")
+				user.msg(null, ARTEMIS_ACTION_EMOTE, homeChannel, "[artemis.list2text(rest, " ")]")
 		// Reboot the server
 			if("reboot")
-				user.msg("#[homeChannel]", ACTION_MESSAGE, "Rebooting.")
+				user.msg(null, ARTEMIS_ACTION_MESSAGE, homeChannel, "Rebooting.")
 				sleep(10)
 				world.Reboot()
 		// Inform caller of success
@@ -164,7 +162,7 @@ artemis/bot/logger/proc
 
 	updateStats()
 		set background = 1
-		user.msg("#[homeChannel]", ACTION_EMOTE, "is updating the channel statistics")
+		user.msg(null, ARTEMIS_ACTION_EMOTE, homeChannel, "is updating the channel statistics")
 		// Get all messages from the compilation period
 		var/list/period = new()
 		for(var/day = statsPeriod+1 to 1 step -1)
@@ -205,7 +203,7 @@ artemis/bot/logger/proc
 		if(fexists(filePath)){ fdel(filePath)}
 		var F = file(filePath)
 		F << {"[header] [hourlyActivity] [activeUsers] [associates] [footer]"}
-		user.msg("#[homeChannel]", ACTION_MESSAGE, {"Stats updated: byond://?action=stats;channel=[homeChannel]"})
+		user.msg(null, ARTEMIS_ACTION_MESSAGE, homeChannel, {"Stats updated: byond://?action=stats;channel=[homeChannel];src=\ref[src];"})
 
 
 	statsDay(day)

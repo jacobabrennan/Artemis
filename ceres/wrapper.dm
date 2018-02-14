@@ -15,6 +15,9 @@ client
 		if(key != "IainPeregrine") return
 		world << "\n\n"
 		world.Reboot()
+	East()
+		var newChannel = input(src, "Set Default Channel", "Configuration", ARTEMIS_CHANNEL_DEFAULT) as text
+		artemis.setDefaultChannel(newChannel)
 
 world
 	name = "Artemis"
@@ -37,7 +40,7 @@ world/New()
 	//
 	artemis = new(artemisHandle)
 	world << {"Server "[artemis.handle]" opened on port [port]."}
-	world << {"Address:: [world.internet_address]:[world.port] \n\n"}
+	world << {"Address:: [world.address]:[world.port] \n\n"}
 	//
 	var /artemis/bot/logger/sally = new("Salamander", "artemis")
 	sally.userPermissions["iainperegrine"] = 5

@@ -7,101 +7,99 @@ artemis/channel
 	var
 		name
 		topic
-		list/activeUsers = new() // list of full_names currently in channel
+		list/activeUsers = new() // list of user instances currently in channel
 		list/localUsers = new() // subset of activeUsers on local server
-		list/userPermissions = new // full_names associated with permission tiers (5 to 0)
+		list/userPermissions = new // user associated with permission tiers (5 to 0)
 		status = 0 // see status bit flags in defines.dm
+
+	New(newName)
+		. = ..()
+		name = artemis.validId(newName)
+		topic = name
+		artemis.namedChannels[name] = src
 
 	//-- User Management -----------------------------
 	proc
-		addUser(userName)
-			var/artemis/user/joinUser = artemis.getUser(userName)
-			if(!joinUser) return
+		addUser(artemis/user/joinUser)
 			if(!activeUsers.len)
-				userPermissions[userName] = PERMISSION_OWNER
-			activeUsers.Add(userName)
-			joinUser.channelAdd(name)
-			artemis.msg(SYSTEM, "[userName]#[name]", ACTION_TRAFFIC, "topic=[url_encode(topic)];")
-			if(!findtextEx(userName, "."))
-				localUsers += userName
-			for(var/localUser in localUsers)
-				artemis.msg(SYSTEM, "[localUser]#[name]", ACTION_TRAFFIC, "join=[userName];")
+				userPermissions[joinUser] = ARTEMIS_PERMISSION_OWNER
+			activeUsers.Add(joinUser)
+			joinUser.channelAdd(src)
+			artemis.msg(artemis.SYSTEM, joinUser, ARTEMIS_ACTION_TRAFFIC, src, "topic=[url_encode(topic)];")
+			if(!joinUser.nameHost)
+				localUsers.Add(joinUser)
+			for(var/artemis/user/localUser in localUsers)
+				artemis.msg(artemis.SYSTEM, localUser, ARTEMIS_ACTION_TRAFFIC, src, "join=[joinUser.nameFull];")
 
-		removeUser(userName)
-			activeUsers -= userName
-			localUsers -= userName
-			var /artemis/user/removeUser = artemis.getUser(userName)
+		removeUser(artemis/user/removeUser)
+			activeUsers.Remove(removeUser)
+			localUsers.Remove(removeUser)
 			if(removeUser)
-				removeUser.channelRemove(name)
+				removeUser.channelRemove(src)
 			if(!activeUsers.len)
 				spawn()
 					artemis.namedChannels.Remove(name)
 					del src
 			for(var/localUser in localUsers)
-				artemis.msg(SYSTEM, "[localUser]#[name]", ACTION_TRAFFIC, "leave=[userName];")
+				artemis.msg(artemis.SYSTEM, localUser, ARTEMIS_ACTION_TRAFFIC, src, "leave=[removeUser.nameFull];")
 
 	//-- Message Handling ----------------------------
 	proc
 		receive(artemis/msg/msg)
-			. = RESULT_SUCCESS // Important! Will not route to other servers without this value returned
+			. = ARTEMIS_RESULT_SUCCESS // Important! Will not route to other servers without this value returned
 			var resultCode
 			switch(msg.action)
-				if(ACTION_MESSAGE, ACTION_EMOTE, ACTION_CODE)
+				if(ARTEMIS_ACTION_MESSAGE, ARTEMIS_ACTION_EMOTE, ARTEMIS_ACTION_CODE)
 					resultCode = actionMessage(msg)
-				if(ACTION_JOIN)
+				if(ARTEMIS_ACTION_JOIN)
 					resultCode = actionJoin(msg)
-				if(ACTION_LEAVE)
+				if(ARTEMIS_ACTION_LEAVE)
 					resultCode = actionLeave(msg)
-				if(ACTION_OPERATE)
+				if(ARTEMIS_ACTION_OPERATE)
 					resultCode = actionOperate(msg)
 			if(resultCode)
 				return resultCode
 
 		actionMessage(artemis/msg/msg)
 			if(!canSpeak(msg.sender))
-				spawn()
-					artemis.msg(SYSTEM, "[msg.sender]#[name]", ACTION_DENIED, "You do not have permission to send messages to this channel.")
-				return ACTION_DENIED
-			for(var/userName in localUsers)
-				artemis.msg(msg.sender, "[userName]#[name]", msg.action, msg.body, msg.time)
+				return ARTEMIS_ACTION_DENIED
+			for(var/artemis/user/localUser in localUsers)
+				artemis.msg(msg.sender, localUser, msg.action, src, msg.body, msg.time)
 
 		actionJoin(artemis/msg/msg)
 			if(msg.sender in activeUsers)
-				return RESULT_FAILURE
-			if(permissionLevel(msg.sender) <= PERMISSION_BLOCKED)
-				spawn()
-					artemis.msg(SYSTEM, "[msg.sender]#[name]", ACTION_DENIED, "You do not have permission to join this channel.")
-				return ACTION_DENIED
+				return ARTEMIS_RESULT_FAILURE
+			if(permissionLevel(msg.sender) <= ARTEMIS_PERMISSION_BLOCKED)
+				return ARTEMIS_ACTION_DENIED
 			addUser(msg.sender)
-			return RESULT_SUCCESS
+			return ARTEMIS_RESULT_SUCCESS
 
 		actionLeave(artemis/msg/msg)
 			if(!(msg.sender in activeUsers))
-				return ACTION_MALFORMED
+				return ARTEMIS_RESULT_MALFORMED
 			removeUser(msg.sender)
-			return RESULT_SUCCESS
+			return ARTEMIS_RESULT_SUCCESS
 
 		actionOperate(artemis/msg/msg)
 			// Cancel out if the msg sender doesn't have appropriate permissions
 			if(!canOperate(msg.sender))
-				spawn()
-					artemis.msg(SYSTEM, "[msg.sender]#[name]", ACTION_DENIED, "You do not have permission to operate this channel.")
-				return ACTION_DENIED
+				return ARTEMIS_ACTION_DENIED
 			//
 			var/list/params = params2list(lowertext(msg.body))
 			for(var/index in params)
 				switch(index) // closed, hidden, locked
 					if("status")
 						var/value = text2num(params[index])
-						value &= (STATUS_CLOSED | STATUS_LOCKED | STATUS_HIDDEN)
+						value &= (ARTEMIS_STATUS_CLOSED | ARTEMIS_STATUS_LOCKED | ARTEMIS_STATUS_HIDDEN)
 						status = value
-						for(var/user_name in activeUsers)
-							artemis.msg(SYSTEM, "[user_name]#[name]", ACTION_TRAFFIC, "status=[status];")
+						for(var/artemis/user/localUser in localUsers)
+							artemis.msg(artemis.SYSTEM, localUser, ARTEMIS_ACTION_TRAFFIC, src, "status=[status];")
 					if("topic")
 						topic = url_decode(params[index])
-						for(var/user_name in localUsers)
-							artemis.msg(SYSTEM, "[user_name]#[name]", ACTION_TRAFFIC, "topic=[url_encode(topic)];")
-					if("user")
+						for(var/artemis/user/localUser in localUsers)
+							artemis.msg(artemis.SYSTEM, localUser, ARTEMIS_ACTION_TRAFFIC, src, "topic=[url_encode(topic)];")
+					//if("user") // This is a mess
+						/*
 						var usersList = params[index]
 						var newList = {""}
 						var /list/senderPath = artemis.text2list(msg.sender, ".")
@@ -122,21 +120,22 @@ artemis/channel
 									else
 										userName += ".[remoteHandle]"
 							var newPermission = text2num(copytext(section, equalPos+1))
-							newPermission &= ~PERMISSION_ACTIVEFLAG
+							newPermission &= ~ARTEMIS_PERMISSION_ACTIVEFLAG
 							newPermission = min(newPermission, permissionLevel(msg.sender))
-							if(!(userName in activeUsers) && newPermission == PERMISSION_NORMAL)
+							if(!(userName in activeUsers) && newPermission == ARTEMIS_PERMISSION_NORMAL)
 								userPermissions -= userName
 							else
 								userPermissions[userName] = newPermission
 							if(length(newList)) newList += " "
 							newList += "[userName]:[newPermission]"
-							newPermission = max(0, min(PERMISSION_OWNER, newPermission))
+							newPermission = max(0, min(ARTEMIS_PERMISSION_OWNER, newPermission))
 							for(var/_name in localUsers)
-								artemis.msg(SYSTEM, "[_name]#[name]", ACTION_TRAFFIC, "user=[userName]:[newPermission]")
-							if((newPermission <= PERMISSION_BLOCKED) && (userName in activeUsers))
+								artemis.msg(SYSTEM, "[_name]#[name]", ARTEMIS_ACTION_TRAFFIC, "user=[userName]:[newPermission]")
+							if((newPermission <= ARTEMIS_PERMISSION_BLOCKED) && (userName in activeUsers))
 								removeUser(userName)
 						params[index] = newList
 						msg.body = list2params(params)
+						*/
 					//if("server")
 						// TODO: Blocking servers
 
@@ -146,51 +145,54 @@ artemis/channel
 //-- Text Utilities ------------------------------
 artemis/channel
 	proc
-		chan2string()
+		toJSON()
 			if(!length(topic))
-				topic = "[name] -- Artemis Chat"
-			var/string = {"!name=[name];!status=[status];!topic=[url_encode(topic)]"}
-			for(var/userName in userPermissions)
-				var /artemis/user/permissionUser = artemis.getUser(userName)
+				topic = "[name]"
+			var /list/objectData = list()
+			objectData["name"] = name
+			objectData["status"] = status
+			objectData["topic"] = topic
+			var /list/permissions = list()
+			for(var/artemis/user/permissionUser in userPermissions)
 				if(permissionUser.nameHost) continue
-				var/tier = userPermissions[userName]
-				if(userName in activeUsers)
-					tier |= PERMISSION_ACTIVEFLAG
-				string += ";[userName]=[tier]"
-			for(var/userName in activeUsers)
-				if(userName in userPermissions) continue
-				var /artemis/user/permissionUser = artemis.getUser(userName)
+				var tier = userPermissions[permissionUser]
+				if(permissionUser in activeUsers)
+					tier |= ARTEMIS_PERMISSION_ACTIVEFLAG
+				permissions[permissionUser.nameFull] = tier
+			for(var/artemis/user/permissionUser in activeUsers)
+				if(permissionUser in userPermissions) continue
 				if(permissionUser.nameHost) continue
-				string += ";[userName]=[PERMISSION_ACTIVEFLAG]"
-			return string
+				permissions[permissionUser.nameFull] = ARTEMIS_PERMISSION_ACTIVEFLAG
+			objectData["users"] = permissions
+			return objectData
 
 //-- Permission Access Utilities -----------------
 artemis/channel
 	proc
-		permissionLevel(userName)
-			userName = lowertext(userName)
-			if(!(userName in userPermissions))
-				return PERMISSION_NORMAL
-			return userPermissions[userName]
+		permissionLevel(artemis/user/user)
+			user.nameFull = lowertext(user.nameFull)
+			if(!(user.nameFull in userPermissions))
+				return ARTEMIS_PERMISSION_NORMAL
+			return userPermissions[user]
 
-		isOwner(userName)
-			if(permissionLevel(userName) >= PERMISSION_OWNER) return TRUE
+		isOwner(artemis/user/user)
+			if(permissionLevel(user) >= ARTEMIS_PERMISSION_OWNER) return TRUE
 
-		canOperate(userName)
-			if(!(userName in activeUsers)) return FALSE
-			if(permissionLevel(userName) >= PERMISSION_OPERATOR) return TRUE
+		canOperate(artemis/user/user)
+			if(!(user in activeUsers)) return FALSE
+			if(permissionLevel(user) >= ARTEMIS_PERMISSION_OPERATOR) return TRUE
 
-		canSpeak(userName)
-			if(!(userName in activeUsers)) return FALSE
-			var/tier = permissionLevel(userName)
-			if(tier >= PERMISSION_VOICED) return TRUE
-			if(status & STATUS_LOCKED) return FALSE
-			if(tier <= PERMISSION_MUTED) return FALSE
+		canSpeak(artemis/user/user)
+			if(!(user in activeUsers)) return FALSE
+			var/tier = permissionLevel(user)
+			if(tier >= ARTEMIS_PERMISSION_VOICED) return TRUE
+			if(status & ARTEMIS_STATUS_LOCKED) return FALSE
+			if(tier <= ARTEMIS_PERMISSION_MUTED) return FALSE
 			return TRUE
 
-		canJoin(userName)
-			var/tier = permissionLevel(userName)
-			if(tier >= PERMISSION_VOICED) return TRUE
-			if(status & STATUS_CLOSED) return FALSE
-			if(tier <= PERMISSION_BLOCKED) return FALSE
+		canJoin(artemis/user/user)
+			var/tier = permissionLevel(user)
+			if(tier >= ARTEMIS_PERMISSION_VOICED) return TRUE
+			if(status & ARTEMIS_STATUS_CLOSED) return FALSE
+			if(tier <= ARTEMIS_PERMISSION_BLOCKED) return FALSE
 			return TRUE

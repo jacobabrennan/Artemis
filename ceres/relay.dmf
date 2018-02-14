@@ -123,7 +123,6 @@ window "channel"
 		size = 640x480
 		anchor1 = none
 		anchor2 = none
-		background-color = none
 		saved-params = "pos;size;is-minimized;is-maximized"
 		title = "channel"
 		titlebar = false
@@ -232,11 +231,12 @@ window "main"
 		size = 640x510
 		anchor1 = none
 		anchor2 = none
+		background-color = none
 		is-default = true
 		saved-params = "pos;size;is-minimized;is-maximized"
 		title = "Artemis - Relay Chat"
 		statusbar = false
-		icon = 'client\\artemis.dmi'
+		icon = 'ceres\\artemis.dmi'
 		macro = "macro"
 		menu = "menu"
 	elem "join_label"
@@ -247,6 +247,7 @@ window "main"
 		anchor2 = none
 		font-family = "Fixedsys"
 		font-size = 12
+		background-color = none
 		saved-params = ""
 		text = "Join: "
 		align = right
@@ -295,6 +296,7 @@ window "main"
 		anchor2 = 100,100
 		font-family = "Fixedsys,Georgia,Verdana,Sylfaen"
 		font-size = 12
+		background-color = none
 		saved-params = ""
 		current-tab = "channel"
 
@@ -1120,6 +1122,7 @@ window "preferences"
 		size = 400x370
 		anchor1 = none
 		anchor2 = none
+		background-color = none
 		is-visible = false
 		saved-params = "pos;size;is-minimized;is-maximized"
 		title = "Preferences"
@@ -1135,6 +1138,7 @@ window "preferences"
 		anchor2 = none
 		font-family = "Fixedsys"
 		font-size = 12
+		background-color = none
 		saved-params = "is-checked"
 		text = "Done"
 		command = ".apply_pref_changes 1"
@@ -1146,6 +1150,7 @@ window "preferences"
 		anchor2 = 100,100
 		font-family = "Fixedsys"
 		font-size = 12
+		background-color = none
 		saved-params = ""
 		tabs = "pref_naming, pref_general, pref_color, pref_time"
 		current-tab = "pref_naming"
@@ -1186,6 +1191,7 @@ window "window1"
 		size = 294x220
 		anchor1 = none
 		anchor2 = none
+		background-color = none
 		saved-params = "pos;size;is-minimized;is-maximized"
 	elem "output1"
 		type = OUTPUT

@@ -1,15 +1,5 @@
 
 
-//-- Preprocessor - See end of file for namespace cleanup ----------------------
-
-#define CERES_PREFERENCES_VERSION 3
-
-#define CERES_PATH_PREFERENCES "data/preferences"
-
-#define CERES_LOAD_KEY(theKey) theKey = objectData[#theKey]
-#define CERES_SAVE_KEY(theKey) objectData[#theKey] = theKey
-
-
 //-- QuickSort - Attributed to AbyssDragon -------
 ceres
 	proc
@@ -39,170 +29,67 @@ ceres
 				var /ceres/whoMarker/markB = B
 				return (A.tier - markB.tier)
 			if(istype(B))
-				var artemis/channel/chanA = A
+				var /artemis/channel/chanA = A
 				return chanA.activeUsers.len - B.activeUsers.len
 
 
 //------------------------------------------------------------------------------
 
+//-- View Code Messages --------------------------------------------------------
 
-//-- Message Handling ----------------------------------------------------------
-
-//-- Utility Class -------------------------------
-ceres
-	var
-		list/codeMessages = new()
-	codeMessage
-		parent_type = /datum
-		var
-			id
-			code
-			sender
-		New(artemis/msg/_msg)
-			id = rand(1,9999)
-			code = _msg.body
-			sender = _msg.sender
-			spawn(3000)
-				del src
-
-//------------------------------------------------
-ceres
+ceres/preferences/skin
 	proc
-		echo(artemis/msg/msg) // Unrefactored
-			var/tab_channel
-			var/artemis/user/target = artemis.getUser(msg.target)
-			if(!target) return
-			var/hash_pos = findtextEx(msg.target, "#")
-			if(hash_pos)
-				tab_channel = "#[copytext(msg.target, hash_pos+1)]"
-			else
-				tab_channel = target.nameFull
-			if(!(tab_channel in rooms))
-				roomAdd(tab_channel, FALSE)
-			var/formatted_text
-			switch(msg.action)
-				if(ACTION_MESSAGE)
-					if(!msg.body) return
-					formatted_text = formatUser(user, msg.body, msg.time)
-					roomFlash(tab_channel)
-				if(ACTION_EMOTE)
-					if(!msg.body) return
-					formatted_text = formatEmote(user, msg.body, msg.time)
-					roomFlash(tab_channel)
-				if(ACTION_CODE)
-					if(!msg.body) return
-					var /ceres/codeMessage/cm = new(msg)
-					codeMessages += cm
-					formatted_text = formatUsercode(user, cm, msg.time)
-					roomFlash(tab_channel)
-			src << output(formatted_text, "[tab_channel].output")
+		codeStyle()
+			return {"
+			<style type="text/css">
+				body{
+					background:[background];
+					}
+				pre.code{
+					color:[user_message];
+					background:[background];
+					margin:0.5em;
+					}
+				.comment{color:[traffic];}
+				.preproc{color:[system];}
+				.number{color:[user_message];}
+				.ident{color:[user_message];}
+				.keyword{color:[user];}
+				.string{color:[time_stamp];}
+			</style>
+			"}
 
-		receive(var/artemis/msg/msg) // Unrefactored
-			. = TRUE
-			var/tab_channel
-			var/artemis/user/sender = artemis.getUser(msg.sender)
-			if(!sender) return
-			var/hash_pos = findtextEx(msg.target, "#")
-			if(hash_pos)
-				tab_channel = "#[copytext(msg.target, hash_pos+1)]"
-			else
-				tab_channel = sender.nameFull
-			if(!(tab_channel in rooms))
-				roomAdd(tab_channel, FALSE)
-			var/formatted_text
-			switch(msg.action)
-				if(ACTION_TRAFFIC)
-					formatted_text = handleTraffic(tab_channel, msg)
-					if(!preferences.traffic) return
-					if(!formatted_text) return
-				if(ACTION_MESSAGE)
-					if(!msg.body) return
-					formatted_text = formatUser(sender, msg.body, msg.time)
-					roomFlash(tab_channel)
-				if(ACTION_EMOTE)
-					if(!msg.body) return
-					formatted_text = formatEmote(sender, msg.body, msg.time)
-					roomFlash(tab_channel)
-				if(ACTION_DENIED)
-					if(!msg.body) return
-					formatted_text = formatSystem(msg.body, msg.time)
-					roomFlash(tab_channel)
-				if(ACTION_CODE)
-					if(!msg.body) return
-					var /ceres/codeMessage/cm = new(msg)
-					codeMessages += cm
-					formatted_text = formatUsercode(sender, cm, msg.time)
-					roomFlash(tab_channel)
-			src << output(formatted_text, "[tab_channel].output")
-
-		handleTraffic(tab_channel, artemis/msg/msg) // Unrefactored
-			var/list/params = params2list(msg.body)
-			var/info
-			var/index = params[1]
-			var/value = params[index]
-			switch(index)
-				if("nick")
-					if(!preferences.view_nicks) return
-					var/colon_pos = findtextEx(value, ":")
-					if(!colon_pos || colon_pos == 1) return
-					var/user_name = copytext(value, 1, colon_pos)
-					var/artemis/user/U = artemis.getUser(user_name)
-					if(!U) return
-					var/old_nick = copytext(value, colon_pos+1)
-					if(old_nick){ info = {" ([old_nick])"}}
-					var/full_span = "&lt;[U.nameFull]&gt;"
-					var/new_nick = U.nickname? html_encode(U.nickname) : full_span
-					info = {"[full_span][info] is now known as [new_nick]"}
-					updateWhogrid(tab_channel)
-				if("join")
-					var/artemis/user/U = artemis.getUser(value)
-					if(!U){ return}
-					if(preferences.view_nicks && U.nickname)
-						info = {"[html_encode(U.nickname)] "}
-					info = {"[info]&lt;[U.nameFull]&gt; has connected."}
-					updateWhogrid(tab_channel)
-				if("leave")
-					var/artemis/user/U = artemis.getUser(value)
-					if(!U) return
-					if(preferences.view_nicks && U.nickname)
-						info = {"[html_encode(U.nickname)] "}
-					info = {"[info]&lt;[U.nameFull]&gt; has disconnected."}
-					updateWhogrid(tab_channel)
-				if("topic")
-					var/capitol = uppertext(copytext(value,1,2)) // HACK
-					var/rest = copytext(value, 2) // HACK
-					winset(src, "[tab_channel].topic", "text=' [capitol][rest]';")
+ceres
+	Topic(href, list/hrefList, hsrc)
+		.=..()
+		//
+		var action = hrefList["action"]
+		switch(action)
+		// Show Channel Stats
+			if("stats")
+				var/_channel = hrefList["channel"]
+				if(!_channel) return
+				if(!fexists("[CERES_PATH_STATS]/[_channel].html")) return
+				src << run(file("[CERES_PATH_STATS]/[_channel].html"))
+		// Show Code Messages
+			if("viewcode")
+				// Retrieve code message from \ref number
+				var refNum = hrefList["code"]
+				var /ceres/codeMessage/cm = locate(refNum)
+				// Cancel out if not located or expired
+				if(!cm)
+					info("This code message has expired.")
 					return
-				if("user")
-					var/colon_pos = findtextEx(value, ":")
-					if(!colon_pos || colon_pos == 1) return
-					var/user_name = copytext(value, 1, colon_pos)
-					var/artemis/user/U = artemis.getUser(user_name)
-					if(!U) return
-					var/_tier = text2num(copytext(value, colon_pos+1))
-					if(!isnum(_tier)) return
-					var/tiers = list("Blocked", "Muted", "Normal", "Voiced", "Operator", "Owner")
-					var/permission_tier = tiers[_tier+1]
-					if(preferences.view_nicks && U.nickname)
-						info = {"[html_encode(U.nickname)] "}
-					info = {"[info]&lt;[U.nameFull]&gt; permission has been set to: [permission_tier]"}
-					updateWhogrid(tab_channel)
-				if("status")
-					info = {"Channel status has been set to:"}
-					var/new_status = text2num(value)
-					var/normal = TRUE
-					if(new_status & STATUS_CLOSED){ info += " CLOSED"; normal = FALSE}
-					if(new_status & STATUS_LOCKED){ info += " LOCKED"; normal = FALSE}
-					if(new_status & STATUS_HIDDEN){ info += " HIDDEN"; normal = FALSE}
-					if(normal)
-						info += " NORMAL"
-			if(!info) return
-			var/time_stamp = {""}
-			var/body_span = {"<span class="traffic">[info]</span>"}
-			if(preferences.time_stamps)
-				time_stamp = time2stamp(msg.time, preferences.time_zone + preferences.daylight)
-				time_stamp = {"<span class="time_stamp"><span class="traffic">[time_stamp]</span></span>"}
-			return {"[time_stamp] [body_span]"}
+				var/_id = text2num(hrefList["id"])
+				if(_id != cm.id)
+					info("This code message has expired.")
+					return
+				// Display Code in the browser
+				var/bodyText = "[cm.code]"
+				bodyText = highlighter.HighlightCode(bodyText)
+				var codeStyle = preferences.skin.codeStyle()
+				bodyText = "<html><title>Code Viewer</title><head>[codeStyle]</head><body>[bodyText]</body></html>"
+				src << browse(bodyText, "window=browser_code_viewer")
 
 
 //-- Output Formatting ---------------------------------------------------------
@@ -273,7 +160,7 @@ ceres
 			var/sender_span
 			if(using_nick) sender_span = html_encode(sender.nickname)
 			else sender_span = sender.nameFull
-			var/message_span = {"<a href="?action=viewcode;code=\ref[cm];id=[cm.id];">Click to view Code</a>"}
+			var/message_span = {"<a href="?src=\ref[src];action=viewcode;code=\ref[cm];id=[cm.id];">Click to view Code</a>"}
 			if(preferences.show_colors || sender == user)
 				sender_span  = {"<span style="color:[sender.colorName]">[sender_span ]</span>"}
 			var/separator = " "
@@ -328,8 +215,6 @@ ceres
 			skin = new()
 
 		//------------------------------------------------
-
-		//------------------------------------------------
 		skin
 			parent_type = /datum
 			var
@@ -345,22 +230,22 @@ ceres
 				time_stamp = "#999980" // class="time_stamp"
 
 			proc
-				apply(var/ceres/who, chan_name) // Unrefactored
+				apply(var/ceres/who, ceres/room/specificRoom)
 					if(!who) return
 					var/style = style()
-					var/list/_channels
-					if(chan_name) _channels = list(chan_name)
-					else _channels = who.rooms
+					var/list/rooms
+					if(specificRoom) rooms = list(specificRoom)
+					else rooms = who.namedRooms
 					winset(who, "input", "background-color='[user_message]';text-color='[background]';font-family='[chat_font], fixedsys';font-size='[font_size]';")
 					winset(who, "close", "background-color='[user_message]';text-color='[background]';font-family='[chat_font], fixedsys';font-size='[font_size]';")
 					winset(who, "join", "background-color='[user_message]';text-color='[background]';font-family='[chat_font], fixedsys';font-size='[font_size]';")
-					for(var/channel_name in _channels)
-						if(copytext(channel_name, 1, 2) == "#")
-							winset(who, "[channel_name].topic", "background-color='[background]';text-color='[user_message]'; font-family='[chat_font]';")
-							winset(who, "[channel_name].who", "background-color='[background]';text-color='[user_message]';")
-							winset(who, "[channel_name].who", "")
-							who.updateGrid(channel_name)
-						winset(who, "[channel_name].output", "background-color='[background]';style='[style]';")
+					for(var/ceres/room/styleRoom in rooms)
+						if(istype(specificRoom.target, /artemis/channel))
+							winset(who, "[styleRoom.name].topic", "background-color='[background]';text-color='[user_message]'; font-family='[chat_font]';")
+							winset(who, "[styleRoom.name].who", "background-color='[background]';text-color='[user_message]';")
+							winset(who, "[styleRoom.name].who", "")
+							who.updateGrid(styleRoom)
+						winset(who, "[styleRoom.name].output", "background-color='[background]';style='[style]';")
 
 				style() // Unrefactored
 					var/style = {"
@@ -403,8 +288,7 @@ ceres
 ceres
 	proc
 		nicknameSend()
-			user.msg(SYSTEM, ACTION_NICKNAME, preferences.nickname)
-
+			user.msg(artemis.SYSTEM, ARTEMIS_ACTION_NICKNAME, null, preferences.nickname)
 
 
 //-- Preferences Saving & Loading ----------------------------------------------
@@ -418,7 +302,7 @@ ceres
 			var filePath = "[CERES_PATH_PREFERENCES]/[ckey].json"
 			if(!fexists(filePath))
 				preferences.skin.apply(src)
-				nicknameSend()
+				changeNick(preferences.nickname)
 				return
 			var savedPreferences = file2text(filePath)
 			savedPreferences = json_decode(savedPreferences)
@@ -426,13 +310,13 @@ ceres
 			// Set Colors on User & artemis Nickname
 			user.colorName = preferences.colorName
 			user.colorText = preferences.colorText
-			nicknameSend()
+			changeNick(preferences.nickname)
 
 		preferencesSave()
 			// Set Colors on User & artemis Nickname
 			user.colorName = preferences.colorName
 			user.colorText = preferences.colorText
-			nicknameSend()
+			changeNick(preferences.nickname)
 			// Save Preferences to File
 			var /list/objectData = preferences.toJSON()
 			var filePath = "[CERES_PATH_PREFERENCES]/[ckey].json"
@@ -500,8 +384,3 @@ ceres/preferences/skin
 			CERES_LOAD_KEY(traffic)
 			CERES_LOAD_KEY(system)
 			CERES_LOAD_KEY(time_stamp)
-
-
-//-- Preprocessor Namespace Cleanup --------------------------------------------
-
-// Refactored. None needed at this time.

@@ -5,7 +5,6 @@
 ceres
 	var
 		list/commands
-		current_room
 
 	verb
 		mainParse(what as text|null)
@@ -24,10 +23,6 @@ ceres
 					what = copytext(what,1,CHAR_LIMIT+1)
 				chat(what)
 
-	New()
-		.=..()
-		initialize_commands()
-
 	//-- Input Sanitization --------------------------
 	var
 		regex/sanitizer = new("\n", "g")
@@ -37,10 +32,14 @@ ceres
 			// Also Needed: flood guards
 
 
-	//------------------------------------------------
+	//-- Command Setup & Handling --------------------
+	New()
+		.=..()
+		initialize_commands()
+
 	proc
 		info(what)
-			src << output({"<span class="system">[what]</span>"}, "[current_room].output")
+			currentRoom.hear({"<span class="system">[what]</span>"})
 
 		initialize_commands()
 			commands = new()
@@ -63,34 +62,47 @@ ceres
 			var/result = command.execute(who, arg_text)
 			return result
 
+	//------------------------------------------------
 	verb
-		chat(what as text)
+		chat(what as text) // Talking into a Ceres Room
 			set name = ".chat"
 			what = sanitizeChat(what)
-			if(current_room)
-				if(copytext(current_room, 1, 2) == "#")
-					user.msg(current_room, ACTION_MESSAGE, what)
-				else
-					msg(current_room, what)
+			// Ensure a valid target
+			if(!(currentRoom && currentRoom.target)) return
+			var /artemis/channel/currentTarget = currentRoom.target
+			// Route to channel
+			if(istype(currentTarget))
+				user.msg(null, ARTEMIS_ACTION_MESSAGE, currentTarget, what)
+			// Route to user
+			else if(istype(currentTarget, /artemis/user))
+				var/artemis/msg/M = new(user, currentTarget, ARTEMIS_ACTION_MESSAGE, null, what)
+				artemis.route(M)
+				echo(M)
 
-		msg(who as text, what as text)
+		msg(who as text, what as text) // Private Message
 			set name = ".msg"
 			what = sanitizeChat(what)
 			var/artemis/user/target = artemis.getUser(who)
 			if(!target)
 				info({"The user "[who]" does not exist. You may be using a nickname instead of a network name."})
 				return
-			var/artemis/msg/M = new(user.nameFull, target.nameFull, ACTION_MESSAGE, what)
+			var/artemis/msg/M = new(user, target, ARTEMIS_ACTION_MESSAGE, null, what)
 			artemis.route(M)
 			echo(M)
 
 		emote(what as text)
 			set name = ".emote"
 			what = sanitizeChat(what)
-			if(!current_room) return
-			var/artemis/msg/M = new(user.nameFull, current_room, ACTION_EMOTE, what)
-			artemis.route(M)
-			if(copytext(current_room, 1, 2) != "#")
+			// Ensure a valid target
+			if(!(currentRoom && currentRoom.target)) return
+			var /artemis/channel/currentTarget = currentRoom.target
+			// Route to channel
+			if(istype(currentTarget))
+				user.msg(null, ARTEMIS_ACTION_EMOTE, currentTarget, what)
+			// Route to user
+			else if(istype(currentTarget, /artemis/user))
+				var/artemis/msg/M = new(user, currentTarget, ARTEMIS_ACTION_EMOTE, null, what)
+				artemis.route(M)
 				echo(M)
 
 		open_code_editor()
@@ -114,46 +126,56 @@ ceres
 			quickSort(sorted_channels)
 			for(var/artemis/channel/C in sorted_channels)
 				var/status = {""}
-				if(C.status & STATUS_HIDDEN) continue
-				if(C.status & STATUS_CLOSED) status += " (CLOSED)"
-				if(C.status & STATUS_LOCKED) status += " (LOCKED)"
+				if(C.status & ARTEMIS_STATUS_HIDDEN) continue
+				if(C.status & ARTEMIS_STATUS_CLOSED) status += " (CLOSED)"
+				if(C.status & ARTEMIS_STATUS_LOCKED) status += " (LOCKED)"
 				chan_text += "\n    \[[C.activeUsers.len]\][C.name] [status]: [C.topic]"
 			info(chan_text)
 
 		channel_status()
 			set name = ".status"
-			var/artemis/channel/C = artemis.getChannel(current_room)
-			if(!C){ return}
+			var/artemis/channel/C = currentRoom.target
+			if(!istype(C)){ return}
 			info({"Channel Status: [C.name]
-    Closed: [bool2text(C.status & STATUS_CLOSED)]
-    Locked: [bool2text(C.status & STATUS_LOCKED)]
-    Hidden: [bool2text(C.status & STATUS_HIDDEN)]"})
+    Closed: [bool2text(C.status & ARTEMIS_STATUS_CLOSED)]
+    Locked: [bool2text(C.status & ARTEMIS_STATUS_LOCKED)]
+    Hidden: [bool2text(C.status & ARTEMIS_STATUS_HIDDEN)]"})
 
-		change_nick(new_nick as text)
+		changeNick(newNick as text)
 			set name = ".change_nick"
-			preferences.nickname = new_nick
+			var/global/regex/noSpaces = regex(@"\n|\s", "g")
+			newNick = noSpaces.Replace(newNick, "")
+			newNick = copytext(newNick, 1, CERES_MAX_NICKNAME_LENGTH+1)
+			preferences.nickname = newNick
 			nicknameSend()
 
-		join(channel as text)
+		join(channelName as text)
 			set name = ".join"
-			var/artemis/channel/C = artemis.getChannel(channel)
-			if(C) channel = C.name
-			user.msg("#[channel]", ACTION_JOIN)
-			if(!C) C = artemis.getChannel(channel)
-			if(!C) return
-			//add_room(C.name, TRUE)
-			switch_chan("#[C.name]")
+			var/artemis/channel/C = artemis.getChannel(channelName)
+			if(C)
+				user.msg(null, ARTEMIS_ACTION_JOIN, C)
+			else
+				user.msg(null, ARTEMIS_ACTION_JOIN, channelName)
+				C = artemis.getChannel(channelName)
+			if(!C)
+				return
+			switchChannel(C.name)
 
 		leave(channel as text|null)
 			set name = ".leave"
+			var/artemis/channel/C
+			// Handle Removing Current Room
 			if(!channel)
-				channel = current_room
-			var/artemis/channel/C = artemis.getChannel(channel)
-			if(C)
-				user.msg("#[C.name]", ACTION_LEAVE)
-				roomRemove("#[C.name]")
-			else
-				roomRemove(channel)
+				C = currentRoom.target
+				roomRemove(C)
+				if(istype(C))
+					user.msg(null, ARTEMIS_ACTION_LEAVE, C.name)
+				return
+			// Handle Removing Specified Channel
+			C = artemis.getChannel(channel)
+			if(istype(C))
+				roomRemove(C)
+				user.msg(null, ARTEMIS_ACTION_LEAVE, C.name)
 
 		close()
 			set name = ".close"
@@ -164,69 +186,73 @@ ceres
 		/*disconnect()
 			user.disconnect()*/
 
-		switch_chan(channel as text)
+		switchChannel(roomName as text)
 			set name = ".switch"
-			current_room = channel
-			winset(src, "channels", "current-tab=[channel]")
-			var/title = winget(src, channel, "title")
+			var /ceres/room/namedRoom = namedRooms[roomName]
+			if(!namedRoom) return
+			currentRoom = namedRoom
+			winset(src, "channels", "current-tab=[roomName]")
+			var title = winget(src, namedRoom.name, "title")
 			if(copytext(title,1,2) == "*")
 				title = copytext(title,2)
-				winset(src, channel, "title='[title]'")
+				winset(src, namedRoom.name, "title='[title]'")
 
 		operate(action as text, username as text, value as num)
 			set name = ".operate"
-			var/channel = current_room
-			var/artemis/channel/C = artemis.getChannel(copytext(channel,2))
-			var/artemis/user/U = artemis.getUser(username)
-			if(!C) return
-			var/status = C.status
-			var/p_level = C.permissionLevel(username)
+			var /artemis/channel/C = currentRoom.target
+			if(!istype(C)) return
+			var /artemis/user/U = artemis.getUser(username)
+			var status = C.status
+			var p_level = C.permissionLevel(U)
 			if(U) username = U.nameFull
+			var errorMessage
 			switch(lowertext(action))
 				if("topic")
-					user.msg(channel, ACTION_OPERATE, "topic=[url_encode(value)];")
+					user.msg(null, ARTEMIS_ACTION_OPERATE, C, "topic=[url_encode(value)];")
 				if("block")
-					var/newp = value? PERMISSION_BLOCKED : PERMISSION_NORMAL
-					user.msg(channel, ACTION_OPERATE, "user=[username]:[newp];")
+					var newp = value? ARTEMIS_PERMISSION_BLOCKED : ARTEMIS_PERMISSION_NORMAL
+					user.msg(null, ARTEMIS_ACTION_OPERATE, C, "user=[username]:[newp];")
 				if("mute")
-					if(p_level == PERMISSION_BLOCKED)
-						artemis.msg(SYSTEM, "[user.nameFull][channel]", ACTION_DENIED, "You cannot mute [username], the user is already blocked.")
-						return
-					var/newp = value? PERMISSION_MUTED : PERMISSION_NORMAL
-					user.msg(channel, ACTION_OPERATE, "user=[username]:[newp];")
+					if(p_level == ARTEMIS_PERMISSION_BLOCKED)
+						errorMessage = "You cannot mute [username], the user is already blocked."
+					else
+						var newp = value? ARTEMIS_PERMISSION_MUTED : ARTEMIS_PERMISSION_NORMAL
+						user.msg(null, ARTEMIS_ACTION_OPERATE, C, "user=[username]:[newp];")
 				if("voice")
-					if(p_level > PERMISSION_VOICED)
-						artemis.msg(SYSTEM, "[user.nameFull][channel]", ACTION_DENIED, "You cannot voice [username], the user already has a higher permission level.")
-						return
-					var/newp = value? PERMISSION_VOICED : PERMISSION_NORMAL
-					user.msg(channel, ACTION_OPERATE, "user=[username]:[newp];")
+					if(p_level > ARTEMIS_PERMISSION_VOICED)
+						errorMessage = "You cannot voice [username], the user already has a higher permission level."
+					else
+						var newp = value? ARTEMIS_PERMISSION_VOICED : ARTEMIS_PERMISSION_NORMAL
+						user.msg(null, ARTEMIS_ACTION_OPERATE, C, "user=[username]:[newp];")
 				if("operator")
-					if(p_level > PERMISSION_OPERATOR)
-						artemis.msg(SYSTEM, "[user.nameFull][channel]", ACTION_DENIED, "You cannot make [username] an operator, the user already has a higher permission level.")
-						return
-					var/newp = value? PERMISSION_OPERATOR : PERMISSION_NORMAL
-					user.msg(channel, ACTION_OPERATE, "user=[username]:[newp];")
+					if(p_level > ARTEMIS_PERMISSION_OPERATOR)
+						errorMessage = "You cannot make [username] an operator, the user already has a higher permission level."
+					else
+						var newp = value? ARTEMIS_PERMISSION_OPERATOR : ARTEMIS_PERMISSION_NORMAL
+						user.msg(null, ARTEMIS_ACTION_OPERATE, C, "user=[username]:[newp];")
 				if("owner")
-					if(p_level == PERMISSION_OWNER && username != user.nameFull)
-						artemis.msg(SYSTEM, "[user.nameFull][channel]", ACTION_DENIED, "You cannot [username]'s permission level, the user is a channel owner.")
-						return
-					var/newp = value? PERMISSION_OWNER : PERMISSION_NORMAL
-					user.msg(channel, ACTION_OPERATE, "user=[username]:[newp];")
+					if(p_level == ARTEMIS_PERMISSION_OWNER && username != user.nameFull)
+						errorMessage = "You cannot change [username]'s permission level, the user is a channel owner."
+					else
+						var newp = value? ARTEMIS_PERMISSION_OWNER : ARTEMIS_PERMISSION_NORMAL
+						user.msg(null, ARTEMIS_ACTION_OPERATE, C, "user=[username]:[newp];")
 				if("locked")
-					var/new_s
-					if(value){ new_s = status |  STATUS_LOCKED}
-					else{      new_s = status & ~STATUS_LOCKED}
-					user.msg(channel, ACTION_OPERATE, "status=[new_s];")
+					var new_s
+					if(value){ new_s = status |  ARTEMIS_STATUS_LOCKED}
+					else{      new_s = status & ~ARTEMIS_STATUS_LOCKED}
+					user.msg(null, ARTEMIS_ACTION_OPERATE, C, "status=[new_s];")
 				if("closed")
-					var/new_s
-					if(value) new_s = status |  STATUS_CLOSED
-					else      new_s = status & ~STATUS_CLOSED
-					user.msg(channel, ACTION_OPERATE, "status=[new_s];")
+					var new_s
+					if(value) new_s = status |  ARTEMIS_STATUS_CLOSED
+					else      new_s = status & ~ARTEMIS_STATUS_CLOSED
+					user.msg(null, ARTEMIS_ACTION_OPERATE, C, "status=[new_s];")
 				if("hidden")
-					var/new_s
-					if(value){ new_s = status |  STATUS_HIDDEN}
-					else{      new_s = status & ~STATUS_HIDDEN}
-					user.msg(channel, ACTION_OPERATE, "status=[new_s];")
+					var new_s
+					if(value){ new_s = status |  ARTEMIS_STATUS_HIDDEN}
+					else{      new_s = status & ~ARTEMIS_STATUS_HIDDEN}
+					user.msg(null, ARTEMIS_ACTION_OPERATE, C, "status=[new_s];")
+			if(errorMessage)
+				artemis.msg(artemis.SYSTEM, U, ARTEMIS_ACTION_DENIED, errorMessage)
 
 
 //------------------------------------------------------------------------------
@@ -261,14 +287,13 @@ Usage: /list
 
 		nick
 			aliases = "nick"
-			execute(var/ceres/who, arg_text)
-				if(!arg_text){ return}
-				who.change_nick(arg_text)
+			execute(var/ceres/who, argText)
+				who.changeNick(argText)
 			help()
 				return {"
 Used to change your nickname.
 Usage: /nick newnick
-  newnick: The new nickname you wish to use
+  newnick: The new nickname you wish to use. Use "clear" or leave blank to clear your nickname.
   					"}
 
 		join
@@ -317,12 +342,11 @@ Usage: /status"}
 
 		leave
 			aliases = "leave"
-			execute(var/ceres/who, arg_text)
-				var/list/_args = artemis.text2list(arg_text, " ")
-				if(!_args.len) return
-				var/chan = _args[1]
-				if(!chan) chan = who.current_room
-				who.leave(chan)
+			execute(var/ceres/who, argText)
+				var /list/words = artemis.text2list(argText, " ")
+				if(!words.len) return
+				var channelName = words[1]
+				who.leave(channelName)
 			help()
 				return {"
 Used to leave channels.

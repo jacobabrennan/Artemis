@@ -5,29 +5,29 @@
 ceres
 	proc
 
-		updateWhogrid(channel)
-			var/list/_markers = who_markers[channel]
+		updateWhogrid(artemis/channel/updateChannel)
+			ASSERT(istype(updateChannel))
+			var/list/_markers = who_markers[updateChannel.name]
 			if(_markers)
 				for(var/obj/_marker in _markers)
 					del _marker
-			var/artemis/channel/C = artemis.getChannel(channel)
-			if(!C) return
+			if(!updateChannel) return
 			_markers = list()
-			for(var/user_name in C.activeUsers)
+			for(var/artemis/user/activeUser in updateChannel.activeUsers)
 				var /ceres/whoMarker/_marker = new()
-				_marker.setup(src, user_name, C.permissionLevel(user_name))
+				_marker.setup(src, activeUser.nameFull, updateChannel.permissionLevel(activeUser))
 				_markers += _marker
 			quickSort(_markers)
-			who_markers[channel] = _markers
-			updateGrid(channel)
+			who_markers[updateChannel.name] = _markers
+			updateGrid(updateChannel)
 
-		updateGrid(channel_name)
-			var/list/_markers = who_markers[channel_name]
+		updateGrid(artemis/channel/updateChannel)
+			var/list/_markers = who_markers[updateChannel.name]
 			if(!_markers) _markers = list()
-			winset(src, "[channel_name].who", "cells=[1],[_markers.len]")
+			winset(src, "[updateChannel.name].who", "cells=[1],[_markers.len]")
 			for(var/I = 1 to _markers.len)
 				var/ceres/whoMarker/M = _markers[I]
-				src << output(M,"[channel_name].who:[1],[I]")
+				src << output(M,"[updateChannel.name].who:[1],[I]")
 
 	proc
 		centerWindow(window_name)
@@ -51,11 +51,11 @@ ceres
 
 	verb
 
-		tabchanged() // Not Refactored
+		tabchanged()
 			set name = ".tabchanged"
 			set hidden = TRUE
-			var/channel_name = winget(src, "channels", "current-tab")
-			switch_chan(channel_name)
+			var channelName = winget(src, "channels", "current-tab")
+			switchChannel(channelName)
 
 		about(toggle as num) // Not Refactored
 			set name = ".about"
@@ -133,21 +133,21 @@ ceres
 [ipsum]"}
 			src << output({"<span style="font-family:[preferences.skin.chat_font];font-size:[preferences.skin.font_size]pt;">[test_chat]</span>"}, "pref_color.color_test")
 
-		updateGeneral(var/which as text) // Not Refactored
+		updateGeneral() // Not Refactored
 			set name = ".update_general"
-			switch(which)
+			/*switch(which)
 				if("current")
 					winset(src, "pref_general.g_home", "text='[copytext(current_room,2)]'")
 				if("traffic")
 					var/view_traffic = winget(src, "pref_general.g_traffic", "is-checked")
 					view_traffic = text2bool(view_traffic)
-					preferences.traffic = view_traffic
-			var/home_chan = winget(src, "pref_general.g_home", "text")
-			if(artemis.alphanumeric(home_chan) != home_chan)
+					preferences.traffic = view_traffic*/
+			var homeChannel = winget(src, "pref_general.g_home", "text")
+			if(artemis.alphanumeric(homeChannel) != homeChannel)
 				winset(src, "pref_general.home_error", "is-visible='true'")
 				winset(src, "preferences.pref_tabs", "current-tab='pref_general'")
 				return
-			preferences.home_channel = home_chan
+			preferences.home_channel = homeChannel
 			preferences.skin.chat_font = winget(src, "pref_general.g_font", "text")
 			var/new_font_size = round(text2num(winget(src, "pref_general.g_fontsize", "text")))
 			preferences.skin.font_size = (isnum(new_font_size) && new_font_size >= 0)? new_font_size : preferences.skin.font_size
@@ -166,8 +166,8 @@ ceres
 					view_nicks = text2bool(view_nicks)
 					preferences.view_nicks = view_nicks
 					if(old_val != view_nicks)
-						for(var/channel_name in user.channels)
-							updateWhogrid("#[channel_name]")
+						for(var/artemis/channel/updateChannel in user.channels)
+							updateWhogrid(updateChannel)
 			var/new_nick = winget(src, "pref_naming.name_nickname", "text")
 			if(copytext(new_nick, 1, 2) == " ")
 				winset(src, "pref_naming.name_error", "is-visible='true';text='This nickname is invalid';")
@@ -312,7 +312,7 @@ ceres
 
 		applyPrefChanges(close as num) // Not Refactored
 			set name = ".apply_pref_changes"
-			var success = updateGeneral(FALSE)
+			var success = updateGeneral()
 			if(success)
 				success = updateNaming(FALSE)
 			if(!success && close)
@@ -326,7 +326,7 @@ ceres
 			// Set Colors on User & artemis Nickname
 			user.colorName = preferences.colorName
 			user.colorText = preferences.colorText
-			nicknameSend()
+			changeNick(preferences.nickname)
 			//
 			preferencesSave()
 
@@ -352,12 +352,12 @@ ceres
 			prefix(_tier)
 				if(!_tier) _tier = tier
 				switch(_tier)
-					if(PERMISSION_OWNER   ) return "#"
-					if(PERMISSION_OPERATOR) return "@"
-					if(PERMISSION_VOICED  ) return "+"
-					if(PERMISSION_NORMAL  ) return "*"
-					if(PERMISSION_MUTED   ) return "-"
-					if(PERMISSION_BLOCKED ) return "!"
+					if(ARTEMIS_PERMISSION_OWNER   ) return "#"
+					if(ARTEMIS_PERMISSION_OPERATOR) return "@"
+					if(ARTEMIS_PERMISSION_VOICED  ) return "+"
+					if(ARTEMIS_PERMISSION_NORMAL  ) return "*"
+					if(ARTEMIS_PERMISSION_MUTED   ) return "-"
+					if(ARTEMIS_PERMISSION_BLOCKED ) return "!"
 					else return "*"
 
 			clicked(var/ceres/who)
@@ -382,58 +382,100 @@ ceres // Not Refactored
 		submitCode()
 			set name = ".submit_code"
 			var/_code = winget(src, "code_editor.code_input", "text")
-			var/artemis/msg/M = new(user.nameFull, current_room, ACTION_CODE, _code)
+			var /artemis/channel/currentTarget = currentRoom.target
+			var /artemis/msg/codeMessage
+			if(istype(currentTarget))
+				codeMessage = new(user, null, ARTEMIS_ACTION_CODE, currentTarget, _code)
+			else if(istype(currentTarget, /artemis/user))
+				codeMessage = new(user, currentTarget, ARTEMIS_ACTION_CODE, null, _code)
+				echo(codeMessage)
+			else
+				return
 			winshow(src, "code_editor", FALSE)
 			winset(src, "code_editor.code_input", "text='';")
-			if(copytext(current_room, 1, 2) != "#")
-				echo(M)
-			artemis.route(M)
+			artemis.route(codeMessage)
 
 
 //------------------------------------------------------------------------------
 
 ceres
 	var
-		list/who_markers = new()
-		list/rooms = new()
-	New()
-		.=..()
-		spawn(10)
-			winset(src, "channels", "on-tab='.tabchanged'")
-			winset(src, "about.version", "text='Client Version: 0.8'")
-	proc
-		roomAdd(channel_name, auto_show)
-			rooms.Add(channel_name)
-			var/artemis/channel/C = artemis.getChannel(channel_name)
-			var/artemis/user/U
-			var/title
-			if(C)
-				title = C.name
-				winclone(src, CLONER_CHANNEL, channel_name)
-			else
-				U = artemis.getUser(channel_name)
-				title = "PM:[U.nameFull]"
-				winclone(src, CLONER_PRIVATE, channel_name)
-			preferences.skin.apply(src, channel_name)
-			winset(src, channel_name, "title='[title]'")
-			winset(src, "channels", "tabs='+[channel_name]'")
-			if(auto_show)
-				switch_chan(channel_name)
-
-		roomRemove(channel_name)
-			rooms.Remove(channel_name)
-			winset(src, "channels", "tabs='-[channel_name]'")
-
-		roomFlash(channel_name)
-			if(ckey(channel_name) == ckey(current_room))
+		ceres/room/currentRoom
+		list/namedRooms = new() // Name => Room Instance
+	room
+		parent_type = /datum
+		var
+			target
+			name
+			title
+			ceres/owner
+		New(ceres/newOwner, newTarget)
+			owner = newOwner
+			//
+			target = newTarget
+			if(istype(target, /artemis/channel))
+				var /artemis/channel/targetChannel = target
+				name = targetChannel.name
+				title = name
+			var pm
+			if(istype(target, /artemis/user))
+				var /artemis/user/targetUser = target
+				name = "pm_[targetUser.nameFull]"
+				title = "PM:[targetUser.nameFull]"
+				pm = TRUE
+			if(name in owner.namedRooms)
+				del src
 				return
-			var/artemis/channel/C = artemis.getChannel(channel_name)
-			var/artemis/user/U
-			var/title
-			if(C)
-				title = C.name
+			owner.namedRooms[name] = src
+			//
+			if(!pm)
+				winclone(owner, CLONER_CHANNEL, name)
 			else
-				U = artemis.getUser(channel_name)
-				title = U.nameFull
-			if(copytext(channel_name,1,2) != "#"){ title = "PM:[title]"}
-			winset(src, channel_name, "title='*[title]';")
+				winclone(owner, CLONER_PRIVATE, name)
+			owner.preferences.skin.apply(owner, src)
+			winset(owner, name, "title='[title]'")
+			winset(owner, "channels", "tabs='+[name]'")
+		proc
+			hear(what)
+				owner << output(what, "[name].output")
+
+	var
+		list/who_markers = new()
+
+	Login()
+		. = ..()
+		winset(src, "channels", "tabs=''")
+		winset(src, "channels", "on-tab='.tabchanged'")
+		winset(src, "about.version", "text='Client Version: [CERES_VERSION]'")
+
+	proc
+		roomAdd(tabTarget, autoShow)
+			var /ceres/room/tabRoom = new(src, tabTarget)
+			if(autoShow)
+				switchChannel(tabRoom.name)
+
+		roomRemove(tabTarget)
+			var /ceres/room/tabRoom = getRoom(tabTarget)
+			namedRooms.Remove(tabRoom.name)
+			winset(src, "channels", "tabs='-[tabRoom.name]'")
+
+		getRoom(tabTarget)
+			var tabName
+			if(istype(tabTarget, /artemis/channel))
+				var /artemis/channel/targetChannel = tabTarget
+				tabName = targetChannel.name
+			if(istype(tabTarget, /artemis/user))
+				var /artemis/user/targetUser = tabTarget
+				tabName = "pm_[targetUser.nameFull]"
+			//
+			var /ceres/room/tabRoom = namedRooms[tabName]
+			return tabRoom
+
+		getRoomByName(tabName)
+			return namedRooms[tabName]
+
+		roomFlash(tabName)
+			var /ceres/room/namedRoom = namedRooms[tabName]
+			if(namedRoom == currentRoom)
+				return
+			winset(src, namedRoom.name, "title='*[namedRoom.title]';")
