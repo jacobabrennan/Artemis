@@ -1122,7 +1122,6 @@ window "preferences"
 		size = 400x370
 		anchor1 = none
 		anchor2 = none
-		background-color = none
 		is-visible = false
 		saved-params = "pos;size;is-minimized;is-maximized"
 		title = "Preferences"
@@ -1138,7 +1137,6 @@ window "preferences"
 		anchor2 = none
 		font-family = "Fixedsys"
 		font-size = 12
-		background-color = none
 		saved-params = "is-checked"
 		text = "Done"
 		command = ".apply_pref_changes 1"
@@ -1150,7 +1148,6 @@ window "preferences"
 		anchor2 = 100,100
 		font-family = "Fixedsys"
 		font-size = 12
-		background-color = none
 		saved-params = ""
 		tabs = "pref_naming, pref_general, pref_color, pref_time"
 		current-tab = "pref_naming"
@@ -1191,7 +1188,6 @@ window "window1"
 		size = 294x220
 		anchor1 = none
 		anchor2 = none
-		background-color = none
 		saved-params = "pos;size;is-minimized;is-maximized"
 	elem "output1"
 		type = OUTPUT

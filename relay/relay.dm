@@ -31,6 +31,7 @@ artemis
 	proc/loadConfiguration(newHandle, channelDefault)
 		// Get configuration data from file
 		var filePath = "[ARTEMIS_PATH_DATA]/config_[handle].json"
+		if(!fexists(filePath)) return
 		var /list/configData = json_decode(file2text(filePath))
 		//
 		defaultChannel = configData["defaultChannel"]

@@ -1,13 +1,17 @@
 client
 	North()
 		. = ..()
-		artemis.connect("127.0.0.1", 1000)
+		artemis.connect("127.0.0.1", 7251)
 	Northeast()
 		. = ..()
-		artemis.connect("127.0.0.1", 1001)
+		artemis.connect("127.0.0.1", 7252)
 	Northwest()
 		. = ..()
-		artemis.connect("127.0.0.1", 1002)
+		artemis.connect("127.0.0.1", 7253)
+	West()
+		. = ..()
+		var address = input(src, "Connection Address", "Connect", "127.0.0.1:1000") as text
+		artemis.connect(address)
 	South()
 		. = ..()
 		artemis.disconnect("artemis")
@@ -27,16 +31,16 @@ world
 world/New()
 	.=..()
 	//
-	var lePort = 999
+	var lePort = 7251
 	var success
-	while(!success && lePort < 1100)
+	while(!success && lePort < 7260)
 		success = OpenPort(++lePort)
 		sleep(1)
 	var artemisHandle
 	switch(lePort)
-		if(1000) artemisHandle = "artemis"
-		if(1001) artemisHandle = "ceres"
-		if(1002) artemisHandle = "pallas"
+		if(7251) artemisHandle = "artemis"
+		if(7252) artemisHandle = "ceres"
+		if(7253) artemisHandle = "pallas"
 	//
 	artemis = new(artemisHandle)
 	world << {"Server "[artemis.handle]" opened on port [port]."}
@@ -47,4 +51,4 @@ world/New()
 
 artemis
 	parent_type = /obj
-	icon = 'client/artemis.dmi'
+	icon = 'ceres/artemis.dmi'

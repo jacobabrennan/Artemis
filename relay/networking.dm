@@ -93,7 +93,7 @@ artemis
 
 	//-- Export/Import - Convert Topics to Messages --
 	proc
-		export(list/data, address, list/messages)
+		export(list/data, remoteAddress, list/messages)
 			set waitfor = FALSE
 			// Compile topic text
 			if(istype(messages, /artemis/msg))
@@ -106,12 +106,12 @@ artemis
 					messagePackage[++messagePackage.len] = exportMessage.toJSON()
 				data["messages"] = messagePackage
 			var topicJSON = "artemis=[json_encode(data)]"
-			world << {"<span style="color:#080;">Exporting:: [topicJSON]</span>"}
+			world << {"<span style="color:#080;">Exporting([remoteAddress]):: [topicJSON]</span>"}
 			var topic = url_encode(topicJSON)
 			// Return immediately. Don't wait for network delays.
 			sleep(-1)
 			// Send the message to the remote Artemis Instance
-			var result = world.Export("[address]?[topic]", null, 1)
+			var result = world.Export("[remoteAddress]?[topic]", null, 1)
 			// If we DO NOT get back an Artemis reply, drop the remote server
 			var drop = TRUE
 			if(copytext(result, 1, 8) == "Artemis") drop = FALSE
@@ -123,7 +123,7 @@ artemis
 				if(ownHandle != artemis.handle) drop = TRUE
 			//
 			if(drop)
-				var remoteHandle = addressedHandles[address]
+				var remoteHandle = addressedHandles[remoteAddress]
 				var /artemis/server/remoteServer = getServer(remoteHandle)
 				if(remoteServer)
 					remoteServer.drop()
